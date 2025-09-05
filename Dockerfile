@@ -12,14 +12,13 @@ COPY requirements.txt ./
 COPY app/ ./app/
 COPY migrations/ ./migrations/
 COPY src/ ./src/
+COPY start.sh ./
 
 RUN pip3 install -r requirements.txt
+RUN chmod +x ./start.sh
 
-EXPOSE 8501
+EXPOSE 8000 8501
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
-ENTRYPOINT ["bash", "-c", "\
-    uvicorn app.main:app --host 0.0.0.0 --port 8000 & \
-    streamlit run src/streamlit_app.py --server.port 8501 --server.address 0.0.0.0 \
-"]
+ENTRYPOINT ["./start.sh"]
