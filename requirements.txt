@@ -1,3 +1,23 @@
-altair
-pandas
+# Backend (API)
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+pydantic-settings
+sqlalchemy>=2.0
+psycopg[binary]>=3.1
+pgvector
+alembic
+
+# NLP / ML
+spacy
+sentence-transformers
+scikit-learn
+numpy
+pdfplumber
+python-docx
+
+# UI (Streamlit)
 streamlit
+pandas
+requests

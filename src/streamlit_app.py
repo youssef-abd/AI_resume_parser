@@ -1,40 +1,359 @@
-import altair as alt
-import numpy as np
+import io
+import json
+import os
+from typing import Any, Dict, List, Optional, Tuple
+from html import escape
+import re
 import pandas as pd
+
+import requests
 import streamlit as st
 
-"""
-# Welcome to Streamlit!
+# ------------------------------
+# Config
+# ------------------------------
+DEFAULT_API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:.
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+st.set_page_config(page_title="AI Resume Screener", layout="wide")
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+if "last_job_id" not in st.session_state:
+    st.session_state["last_job_id"] = ""
 
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
+# ------------------------------
+# Helpers
+# ------------------------------
 
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
+def api_post_job_form(api_base: str, title: str, description: str, required_skills_text: Optional[str]) -> Dict[str, Any]:
+    url = f"{api_base.rstrip('/')}/upload_job_form"
+    data = {"title": title, "description": description}
+    if required_skills_text:
+        data["required_skills"] = required_skills_text
+    resp = requests.post(url, data=data, timeout=60)
+    resp.raise_for_status()
+    return resp.json()
 
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
 
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
+def detect_mime_type(filename: str) -> str:
+    ext = (filename or "").lower().rsplit(".", 1)[-1] if "." in (filename or "") else ""
+    if ext == "pdf":
+        return "application/pdf"
+    if ext == "docx":
+        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    return "application/octet-stream"
 
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+
+def api_post_resume(api_base: str, file_bytes: bytes, filename: str, candidate_name: Optional[str]) -> Dict[str, Any]:
+    url = f"{api_base.rstrip('/')}/upload_resume"
+    mime = detect_mime_type(filename)
+    files = {"file": (filename, io.BytesIO(file_bytes), mime)}
+    data = {"candidate_name": candidate_name or ""}
+    resp = requests.post(url, files=files, data=data, timeout=120)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def api_get_match(api_base: str, job_id: str, k: int = 10) -> Dict[str, Any]:
+    url = f"{api_base.rstrip('/')}/match"
+    params = {"job_id": job_id, "k": k}
+    resp = requests.get(url, params=params, timeout=60)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def api_post_resumes(api_base: str, files_data: List[Tuple[str, bytes]], candidate_names: Optional[List[str]]) -> List[Dict[str, Any]]:
+    """Upload multiple resumes via /upload_resumes.
+    files_data: list of (filename, bytes)
+    candidate_names: optional list aligned by index
+    """
+    url = f"{api_base.rstrip('/')}/upload_resumes"
+    files: List[Tuple[str, Tuple[str, io.BytesIO, str]]] = []
+    for filename, content in files_data:
+        mime = detect_mime_type(filename)
+        files.append(("files", (filename, io.BytesIO(content), mime)))
+    data: List[Tuple[str, str]] = []
+    if candidate_names:
+        for name in candidate_names:
+            data.append(("candidate_names", name))
+    resp = requests.post(url, files=files, data=data, timeout=300)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def api_get_resume(api_base: str, resume_id: str) -> Dict[str, Any]:
+    url = f"{api_base.rstrip('/')}/resumes/{resume_id}"
+    resp = requests.get(url, timeout=60)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def api_get_job(api_base: str, job_id: str) -> Dict[str, Any]:
+    url = f"{api_base.rstrip('/')}/jobs/{job_id}"
+    resp = requests.get(url, timeout=60)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def render_highlight_full(text: str, spans: List[Dict[str, int]]) -> str:
+    """Render full text with highlight marks for provided spans (non-overlapping, sorted)."""
+    if not text or not spans:
+        return escape(text or "")
+    # sort & merge overlaps conservatively
+    spans_sorted = sorted(spans, key=lambda s: (int(s.get("start", 0)), int(s.get("end", 0))))
+    merged: List[Tuple[int, int]] = []
+    for sp in spans_sorted:
+        s = int(sp.get("start", 0)); e = int(sp.get("end", 0))
+        if not merged or s > merged[-1][1]:
+            merged.append((s, e))
+        else:
+            # overlap -> extend end
+            merged[-1] = (merged[-1][0], max(merged[-1][1], e))
+    # build html
+    out_parts: List[str] = []
+    prev = 0
+    for s, e in merged:
+        s = max(0, min(s, len(text))); e = max(0, min(e, len(text)))
+        if s > prev:
+            out_parts.append(escape(text[prev:s]))
+        out_parts.append(f"<mark>{escape(text[s:e])}</mark>")
+        prev = e
+    if prev < len(text):
+        out_parts.append(escape(text[prev:]))
+    return "".join(out_parts)
+
+
+def find_term_spans(text: str, terms: List[str]) -> List[Dict[str, int]]:
+    """Find spans for terms (case-insensitive, word boundaries)."""
+    spans: List[Dict[str, int]] = []
+    if not text or not terms:
+        return spans
+    for t in terms:
+        t_norm = (t or "").strip()
+        if not t_norm:
+            continue
+        pattern = re.compile(rf"(?<!\w){re.escape(t_norm)}(?!\w)", re.IGNORECASE)
+        for m in pattern.finditer(text):
+            spans.append({"start": m.start(), "end": m.end()})
+    return spans
+
+
+def make_highlight_snippet(text: str, start: int, end: int, pre: int = 60, post: int = 60) -> str:
+    s = max(0, start - pre)
+    e = min(len(text), end + post)
+    prefix = "…" if s > 0 else ""
+    suffix = "…" if e < len(text) else ""
+    before = escape(text[s:start])
+    target = f"<mark>{escape(text[start:end])}</mark>"
+    after = escape(text[end:e])
+    return prefix + before + target + after + suffix
+
+
+# ------------------------------
+# UI
+# ------------------------------
+st.title("AI Resume Screener")
+
+with st.sidebar:
+    st.header("Settings")
+    api_base = st.text_input("API Base URL", value=DEFAULT_API_BASE, help="Point to your FastAPI server")
+    if st.button("Check Readiness"):
+        try:
+            r = requests.get(f"{api_base.rstrip('/')}/readyz", timeout=10)
+            ok = r.status_code == 200
+            st.success(f"/readyz → {r.status_code} {r.json() if ok else r.text}")
+        except Exception as e:
+            st.error(f"Ready check failed: {e}")
+
+    st.divider()
+    st.caption("Backend: FastAPI + sentence-transformers + spaCy + PostgreSQL/pgvector")
+
+# Tabs
+job_tab, resume_tab, match_tab = st.tabs(["Upload Job", "Upload Resume", "Match Results"])
+
+# ------------------------------
+# Upload Job Tab
+# ------------------------------
+with job_tab:
+    st.subheader("Upload Job")
+    with st.form("job_form"):
+        title = st.text_input("Job Title", value="Software Engineer (Backend/AI)", max_chars=255)
+        description = st.text_area(
+            "Job Description (paste markdown/plaintext)",
+            height=300,
+            value=(
+                "**About the Role**\n\n"
+                "We are looking for a Software Engineer with strong backend and data engineering experience who can also apply modern AI/ML techniques.\n\n"
+                "**Responsibilities**\n- Build APIs\n- Data pipelines\n- Deploy AI models\n\n"
+                "**Required Skills**\n- Python, SQL\n- Docker, Kubernetes\n- AWS or GCP\n"
+            ),
+        )
+        required_skills_text = st.text_area(
+            "Required Skills (optional, comma or newline separated)",
+            placeholder="python, sql, docker, kubernetes, aws, gcp",
+            height=80,
+        )
+        submit = st.form_submit_button("Create Job")
+
+    if submit:
+        try:
+            res = api_post_job_form(api_base, title, description, required_skills_text or None)
+            st.session_state["last_job_id"] = res.get("job_id", "")
+            st.success("Job created")
+            st.json(res)
+        except requests.HTTPError as e:
+            st.error(f"HTTP error: {e.response.status_code} {e.response.text}")
+        except Exception as e:
+            st.error(f"Error creating job: {e}")
+
+    if st.session_state.get("last_job_id"):
+        st.info(f"Last job_id: {st.session_state['last_job_id']}")
+
+# ------------------------------
+# Upload Resume Tab
+# ------------------------------
+with resume_tab:
+    st.subheader("Upload Resumes")
+    candidate_names_text = st.text_area(
+        "Candidate Names (optional; one per line matching file order)",
+        placeholder="Alice\nBob\nCharlie",
+        height=100,
+    )
+    uploaded_files = st.file_uploader("Select PDF or DOCX files", type=["pdf", "docx"], accept_multiple_files=True)
+    if st.button("Upload Selected Resumes"):
+        if not uploaded_files:
+            st.warning("Please select at least one resume file")
+        else:
+            try:
+                files_data: List[Tuple[str, bytes]] = []
+                for up in uploaded_files:
+                    files_data.append((up.name, up.read()))
+                names_list: Optional[List[str]] = None
+                if candidate_names_text.strip():
+                    names_list = [line.strip() for line in candidate_names_text.splitlines() if line.strip()]
+                res_list = api_post_resumes(api_base, files_data, names_list)
+                st.success("Upload complete")
+                st.json(res_list)
+            except requests.HTTPError as e:
+                st.error(f"HTTP error: {e.response.status_code} {e.response.text}")
+            except Exception as e:
+                st.error(f"Error uploading resumes: {e}")
+
+# ------------------------------
+# Match Tab
+# ------------------------------
+with match_tab:
+    st.subheader("Match Results")
+    job_id_input = st.text_input("Job ID", value=st.session_state.get("last_job_id", ""))
+    k = st.slider("Top K", min_value=1, max_value=50, value=10)
+
+    if st.button("Run Match"):
+        if not job_id_input:
+            st.warning("Please enter a job_id (create one in the Upload Job tab)")
+        else:
+            try:
+                data = api_get_match(api_base, job_id_input, k=k)
+                results: List[Dict[str, Any]] = data.get("results", [])
+                st.caption(data.get("note", ""))
+
+                if not results:
+                    st.info("No results found. Upload resumes and try again.")
+                else:
+                    # Ranking chart (composite)
+                    chart_df = pd.DataFrame([
+                        {
+                            "candidate": r.get("candidate_name") or r.get("resume_id"),
+                            "composite": float(r.get("composite_score", 0.0)),
+                        }
+                        for r in results
+                    ])
+                    chart_df = chart_df.sort_values("composite", ascending=False)
+                    st.subheader("Ranking (Composite Score)")
+                    st.bar_chart(chart_df.set_index("candidate"))
+
+                    # Summary table
+                    table_rows = []
+                    for r in results:
+                        table_rows.append(
+                            {
+                                "resume_id": r.get("resume_id"),
+                                "candidate_name": r.get("candidate_name"),
+                                "cosine": round(float(r.get("cosine", 0.0)), 4),
+                                "skills_overlap": round(float(r.get("skills_overlap", 0.0)), 4),
+                                "composite": round(float(r.get("composite_score", 0.0)), 4),
+                                "matched": ", ".join(r.get("matched_skills", []) or []),
+                                "missing": ", ".join(r.get("missing_skills", []) or []),
+                            }
+                        )
+                    st.subheader("Summary Table")
+                    st.dataframe(pd.DataFrame(table_rows), use_container_width=True)
+
+                    # Fetch job details for side-by-side highlighting
+                    try:
+                        job = api_get_job(api_base, job_id_input)
+                        job_desc = job.get("description", "")
+                        req_skills = job.get("required_skills", []) or []
+                    except Exception:
+                        job_desc = ""
+                        req_skills = []
+
+                    # Toggle for context overlaps
+                    show_context = st.checkbox("Show context overlaps (non-skill terms)", value=True)
+
+                    # Detailed explanations per result
+                    st.markdown("---")
+                    for idx, r in enumerate(results, start=1):
+                        st.markdown(f"#### {idx}. Candidate: {r.get('candidate_name') or r.get('resume_id')}")
+                        col1, col2, col3 = st.columns(3)
+                        col1.metric("Cosine", f"{float(r.get('cosine', 0.0)):.3f}")
+                        col2.metric("Skills Overlap", f"{float(r.get('skills_overlap', 0.0)):.3f}")
+                        col3.metric("Composite", f"{float(r.get('composite_score', 0.0)):.3f}")
+
+                        matched = r.get("matched_skills", []) or []
+                        missing = r.get("missing_skills", []) or []
+
+                        # Gap analysis table
+                        st.subheader("Gap Analysis")
+                        gap_df = pd.DataFrame({
+                            "Matched Skills": [", ".join(matched) if matched else "—"],
+                            "Missing Skills": [", ".join(missing) if missing else "—"],
+                        })
+                        st.table(gap_df)
+
+                        # Side-by-side comparison with highlights (skills + optional context)
+                        spans = r.get("matched_spans", []) or []
+                        context_terms = r.get("context_terms", []) or []
+                        context_job_spans = r.get("context_job_spans", []) or []
+                        context_resume_spans = r.get("context_resume_spans", []) or []
+                        try:
+                            resume_id = r.get("resume_id")
+                            resume_data = api_get_resume(api_base, resume_id)
+                            cleaned_text = resume_data.get("cleaned_text", "")
+                        except Exception:
+                            cleaned_text = ""
+
+                        # Gap analysis context overview
+                        st.write("Context overlaps:")
+                        st.write(", ".join(context_terms) if context_terms else "—")
+
+                        left, right = st.columns(2)
+                        with left:
+                            st.caption("Job Description (skills" + (" + context" if show_context else "") + " highlighted)")
+                            # Skills spans in job description are derived from matched skill terms
+                            job_skill_spans = find_term_spans(job_desc, matched)
+                            job_spans_combined = job_skill_spans + (context_job_spans if show_context else [])
+                            job_html = render_highlight_full(job_desc, job_spans_combined)
+                            st.markdown(f"<div style='white-space:pre-wrap'>{job_html}</div>", unsafe_allow_html=True)
+                        with right:
+                            st.caption("Resume (skills" + (" + context" if show_context else "") + " highlighted)")
+                            resume_spans_combined = spans + (context_resume_spans if show_context else [])
+                            resume_html = render_highlight_full(cleaned_text, resume_spans_combined)
+                            st.markdown(f"<div style='white-space:pre-wrap'>{resume_html}</div>", unsafe_allow_html=True)
+
+                        st.markdown("---")
+
+            except requests.HTTPError as e:
+                st.error(f"HTTP error: {e.response.status_code} {e.response.text}")
+            except Exception as e:
+                st.error(f"Error fetching matches: {e}")
+
+st.markdown("\n\n")
+st.caption("Tip: Configure API_BASE_URL env var for this app if your backend isn't on localhost:8000.")

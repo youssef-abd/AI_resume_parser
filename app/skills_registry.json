@@ -1,0 +1,66 @@
+{
+  "skills": [
+    {"name": "python", "aliases": ["py"]},
+    {"name": "java", "aliases": []},
+    {"name": "javascript", "aliases": ["js"]},
+    {"name": "typescript", "aliases": ["ts"]},
+    {"name": "c++", "aliases": []},
+    {"name": "c#", "aliases": []},
+    {"name": "go", "aliases": []},
+    {"name": "rust", "aliases": []},
+    {"name": "sql", "aliases": []},
+
+    {"name": "numpy", "aliases": []},
+    {"name": "pandas", "aliases": []},
+    {"name": "scikit-learn", "aliases": ["sklearn"]},
+    {"name": "tensorflow", "aliases": ["tf"]},
+    {"name": "pytorch", "aliases": ["torch"]},
+    {"name": "spacy", "aliases": []},
+    {"name": "nlp", "aliases": []},
+    {"name": "embeddings", "aliases": []},
+
+    {"name": "fastapi", "aliases": []},
+    {"name": "django", "aliases": []},
+    {"name": "flask", "aliases": []},
+    {"name": "express", "aliases": []},
+    {"name": "node.js", "aliases": ["node"]},
+    {"name": "graphql", "aliases": []},
+
+    {"name": "spark", "aliases": []},
+    {"name": "hadoop", "aliases": []},
+    {"name": "airflow", "aliases": []},
+    {"name": "kafka", "aliases": []},
+
+    {"name": "docker", "aliases": []},
+    {"name": "kubernetes", "aliases": ["k8s", "eks", "gke"]},
+    {"name": "linux", "aliases": []},
+    {"name": "git", "aliases": []},
+    {"name": "ci/cd", "aliases": ["ci cd"]},
+
+    {"name": "aws", "aliases": []},
+    {"name": "azure", "aliases": []},
+    {"name": "gcp", "aliases": ["google cloud", "gcloud"]},
+    {"name": "postgresql", "aliases": ["postgres", "psql"]},
+    {"name": "mysql", "aliases": []},
+    {"name": "mongodb", "aliases": []},
+    {"name": "redis", "aliases": []},
+
+    {"name": "datadog", "aliases": []},
+    {"name": "prometheus", "aliases": []},
+    {"name": "cloudtrail", "aliases": ["cloud trail"]},
+    {"name": "oauth2", "aliases": ["oauth", "sso"]},
+    {"name": "keycloak", "aliases": ["iam"]},
+
+    {"name": "terraform", "aliases": ["iac"]},
+    {"name": "github actions", "aliases": ["github-actions", "gh actions"]},
+    {"name": "jenkins", "aliases": []},
+
+    {"name": "react", "aliases": []},
+    {"name": "html", "aliases": []},
+    {"name": "css", "aliases": []},
+
+    {"name": "hugging face transformers", "aliases": ["huggingface", "transformers", "hf transformers", "huggingface transformers", "hugging face"]},
+    {"name": "sentence-transformers", "aliases": []},
+    {"name": "pgvector", "aliases": []}
+  ]
+}
