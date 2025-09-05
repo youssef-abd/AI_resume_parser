@@ -2,10 +2,13 @@ FROM python:3.13.5-slim
 
 WORKDIR /app
 
+# Install system dependencies including PostgreSQL
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     git \
+    libpq-dev \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Create necessary directories with proper permissions
