@@ -6,7 +6,7 @@ from app.settings import get_settings
 
 from sqlalchemy import DateTime, String, Text, func, text, event, Integer, bindparam, create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session, mapped_column
+from sqlalchemy.orm import sessionmaker, Session, mapped_column, Mapped
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from pgvector.sqlalchemy import Vector
 from pgvector.psycopg import register_vector
