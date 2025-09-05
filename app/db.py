@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from app.settings import get_settings
 
-from sqlalchemy import DateTime, String, Text, create_engine, func, text, event, Integer, bindparam
+from sqlalchemy import DateTime, String, Text, func, text, event, Integer, bindparam
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from pgvector.sqlalchemy import Vector
@@ -33,7 +33,11 @@ _SessionLocal: Optional[sessionmaker[Session]] = None
 def get_engine():
     global _engine
     if _engine is None:
-        _engine = create_engine(get_database_url(), pool_pre_ping=True, future=True)
+        _engine = create_engine(
+            get_database_url(),
+            pool_pre_ping=True,
+            future=True
+        )
 
         # Ensure pgvector is registered with psycopg3 connections
         @event.listens_for(_engine, "connect")
@@ -50,7 +54,12 @@ def get_engine():
 def get_session() -> Session:
     global _SessionLocal
     if _SessionLocal is None:
-        _SessionLocal = sessionmaker(bind=get_engine(), expire_on_commit=False, future=True, class_=Session)
+        _SessionLocal = sessionmaker(
+            bind=get_engine(),
+            expire_on_commit=False,
+            future=True,
+            class_=Session
+        )
     return _SessionLocal()
 
 
