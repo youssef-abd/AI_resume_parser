@@ -4,16 +4,16 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from app.settings import get_settings
 
-from sqlalchemy import DateTime, String, Text, func, text, event, Integer, bindparam
+from sqlalchemy import DateTime, String, Text, func, text, event, Integer, bindparam, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session, mapped_column
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from pgvector.sqlalchemy import Vector
 from pgvector.psycopg import register_vector
 
 
 # --- SQLAlchemy base & engine ---
-class Base(DeclarativeBase):
-    pass
+Base = declarative_base()
 
 
 def get_database_url() -> str:
@@ -36,7 +36,8 @@ def get_engine():
         _engine = create_engine(
             get_database_url(),
             pool_pre_ping=True,
-            future=True
+            future=True,
+            echo=True  # Add SQL logging for debugging
         )
 
         # Ensure pgvector is registered with psycopg3 connections
@@ -55,6 +56,8 @@ def get_session() -> Session:
     global _SessionLocal
     if _SessionLocal is None:
         _SessionLocal = sessionmaker(
+            autocommit=False,
+            autoflush=False,
             bind=get_engine(),
             expire_on_commit=False,
             future=True,
