@@ -12,7 +12,7 @@ import streamlit as st
 # ------------------------------
 # Config
 # ------------------------------
-DEFAULT_API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8500")
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="AI Resume Screener", layout="wide")
 
@@ -154,7 +154,7 @@ st.title("AI Resume Screener")
 
 with st.sidebar:
     st.header("Settings")
-    api_base = st.text_input("API Base URL", value=DEFAULT_API_BASE, help="Point to your FastAPI server")
+    api_base = st.text_input("API Base URL", value=API_BASE_URL, help="Point to your FastAPI server")
     if st.button("Check Readiness"):
         try:
             r = requests.get(f"{api_base.rstrip('/')}/readyz", timeout=10)
