@@ -20,9 +20,9 @@ def get_database_url() -> str:
     # Prefer settings (.env) but allow env var override
     url = os.getenv("DATABASE_URL") or get_settings().database_url
     if not url:
-        raise RuntimeError(
-            "DATABASE_URL is not configured. Set it in .env (DATABASE_URL=...) or environment."
-        )
+        raise RuntimeError("DATABASE_URL must be set")
+    # Replace 'db' with 'postgres' in the URL if needed
+    url = url.replace("db:5432", "postgres:5432")
     return url
 
 
