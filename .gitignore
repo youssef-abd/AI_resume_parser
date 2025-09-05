@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+venv.bak/
+env.bak/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+*.env.local
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Logs / temp
+*.log
+*.tmp
+*.temp
+
+# Project data (generated artifacts)
+data/
+
+# Editors / OS
+.vscode/
+.qodo/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# OneDrive / Office temp files
+~$*
