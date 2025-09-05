@@ -12,7 +12,8 @@ import streamlit as st
 # ------------------------------
 # Config
 # ------------------------------
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+# Use container networking
+API_BASE_URL = os.getenv("API_BASE_URL", "http://0.0.0.0:8000")
 
 st.set_page_config(page_title="AI Resume Screener", layout="wide")
 

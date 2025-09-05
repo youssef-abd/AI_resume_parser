@@ -26,9 +26,10 @@ COPY start.sh ./
 RUN pip3 install -r requirements.txt
 RUN chmod +x ./start.sh
 
-# Set environment variables
+# Set environment variables - use 0.0.0.0 instead of localhost
 ENV DATABASE_URL="postgresql://postgres:postgres@db:5432/resume_parser"
-ENV API_BASE_URL=http://localhost:8000
+ENV API_BASE_URL="http://0.0.0.0:8000"
+ENV HOST="0.0.0.0"
 
 EXPOSE 8000 8501
 
