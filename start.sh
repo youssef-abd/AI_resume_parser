@@ -43,5 +43,5 @@ streamlit run src/streamlit_app.py --server.address=127.0.0.1 --server.port=8501
 # Render Nginx config with PORT and start Nginx in foreground
 >&2 echo "Starting Nginx on port ${PORT}"
 export PORT
-envsubst '$PORT' < nginx.conf.tmpl > /etc/nginx/nginx.conf
-exec nginx -g 'daemon off;'
+envsubst '$PORT' < nginx.conf.tmpl > /app/nginx.conf
+exec nginx -c /app/nginx.conf -g 'daemon off;'

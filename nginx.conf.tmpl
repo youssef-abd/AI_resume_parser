@@ -4,9 +4,17 @@ events {
   worker_connections  1024;
 }
 
+# Write PID to a writable location
+pid /tmp/nginx.pid;
+
+daemon off;
+
+error_log /dev/stderr info;
+
 http {
   include       mime.types;
   default_type  application/octet-stream;
+  access_log    /dev/stdout;
   sendfile        on;
   keepalive_timeout  65;
   server_tokens off;
