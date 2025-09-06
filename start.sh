@@ -59,7 +59,15 @@ wait_for "http://127.0.0.1:8000/health" "FastAPI" 180 || true
 
 # Start Streamlit (internal)
 >&2 echo "Starting Streamlit on 127.0.0.1:8501"
-streamlit run src/streamlit_app.py --server.address=127.0.0.1 --server.port=8501 --server.headless=true --browser.gatherUsageStats=false &
+streamlit run src/streamlit_app.py \
+  --server.address=127.0.0.1 \
+  --server.port=8501 \
+  --server.headless=true \
+  --browser.gatherUsageStats=false \
+  --server.enableCORS=false \
+  --server.enableXsrfProtection=false \
+  --server.maxUploadSize=200 \
+  --server.maxMessageSize=200 &
 # Probe Streamlit health
 wait_for "http://127.0.0.1:8501/_stcore/health" "Streamlit" 120 || true
 
