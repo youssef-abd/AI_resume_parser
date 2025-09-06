@@ -29,10 +29,7 @@ COPY nginx.conf.tmpl ./
 RUN pip3 install -r requirements.txt
 # Preload spaCy model (best-effort) and sentence-transformers to reduce cold start
 RUN python -m spacy download en_core_web_sm || true
-RUN python - << 'PY'
-from sentence_transformers import SentenceTransformer
-SentenceTransformer('all-MiniLM-L6-v2')
-PY
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 RUN chmod +x ./start.sh
 
 # Set environment variables
