@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     git \
     libpq-dev \
     postgresql-client \
+    nginx \
+    gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 # Create necessary directories with proper permissions
@@ -22,18 +24,23 @@ COPY app/ ./app/
 COPY migrations/ ./migrations/
 COPY src/ ./src/
 COPY start.sh ./
+COPY nginx.conf.tmpl ./
 
 RUN pip3 install -r requirements.txt
+# Preload spaCy model (best-effort) and sentence-transformers to reduce cold start
+RUN python -m spacy download en_core_web_sm || true
+RUN python - << 'PY'
+from sentence_transformers import SentenceTransformer
+SentenceTransformer('all-MiniLM-L6-v2')
+PY
 RUN chmod +x ./start.sh
 
 # Set environment variables
-ENV DATABASE_URL="postgresql://postgres:postgres@postgres:5432/resume_parser"
-ENV API_BASE_URL="http://0.0.0.0:8000"
 ENV HOST="0.0.0.0"
 ENV PYTHONUNBUFFERED=1
 
-EXPOSE 8000 8501
+EXPOSE 7860
 
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD bash -lc "curl -fsS http://127.0.0.1:${PORT:-7860}/healthz || exit 1"
 
 ENTRYPOINT ["./start.sh"]

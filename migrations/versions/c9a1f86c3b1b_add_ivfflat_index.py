@@ -1,7 +1,7 @@
 """add IVFFlat index for resumes.embedding
 
 Revision ID: c9a1f86c3b1b
-Revises: 4dbfa0cbe60f
+Revises: 3dda38bea92e
 Create Date: 2025-09-02 00:00:00.000000
 
 """
@@ -9,7 +9,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'c9a1f86c3b1b'
-down_revision = '4dbfa0cbe60f'
+down_revision = '3dda38bea92e'
 branch_labels = None
 depends_on = None
 

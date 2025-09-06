@@ -485,8 +485,8 @@ def readyz():
 def root():
     return {
         "message": "Resume Screener API running",
-        "docs": "/docs",
-        "openapi": "/openapi.json",
+        "docs": "/api/docs",
+        "openapi": "/api/openapi.json",
         "version": app.version,
     }
 
