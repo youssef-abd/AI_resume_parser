@@ -37,6 +37,33 @@ def normalize_api_base(s: str) -> str:
         return "http://" + val
     return val
 
+
+def _toggle_api_suffix(base: str) -> str:
+    b = (base or "").rstrip("/")
+    if b.endswith("/api"):
+        return b[:-4] or b
+    return b + "/api"
+
+
+def _probe_ready(base: str) -> Optional[requests.Response]:
+    try:
+        return requests.get(f"{base.rstrip('/')}/readyz", timeout=5)
+    except Exception:
+        return None
+
+
+def resolve_api_base(base: str) -> str:
+    norm = normalize_api_base(base)
+    r = _probe_ready(norm)
+    if r is not None and r.status_code == 200:
+        return norm
+    alt = _toggle_api_suffix(norm)
+    r2 = _probe_ready(alt)
+    if r2 is not None and r2.status_code == 200:
+        return alt
+    return norm
+
+
 if "last_job_id" not in st.session_state:
     st.session_state["last_job_id"] = ""
 
@@ -179,7 +206,8 @@ with st.sidebar:
     api_base_norm = normalize_api_base(api_base)
     if st.button("Check Readiness"):
         try:
-            r = requests.get(f"{api_base_norm.rstrip('/')}/readyz", timeout=10)
+            resolved = resolve_api_base(api_base_norm)
+            r = requests.get(f"{resolved.rstrip('/')}/readyz", timeout=10)
             ok = r.status_code == 200
             st.success(f"/readyz → {r.status_code} {r.json() if ok else r.text}")
         except Exception as e:
@@ -217,7 +245,8 @@ with job_tab:
 
     if submit:
         try:
-            res = api_post_job_form(api_base_norm, title, description, required_skills_text or None)
+            eff_base = resolve_api_base(api_base_norm)
+            res = api_post_job_form(eff_base, title, description, required_skills_text or None)
             st.session_state["last_job_id"] = res.get("job_id", "")
             st.success("Job created")
             st.json(res)
@@ -251,7 +280,8 @@ with resume_tab:
                 names_list: Optional[List[str]] = None
                 if candidate_names_text.strip():
                     names_list = [line.strip() for line in candidate_names_text.splitlines() if line.strip()]
-                res_list = api_post_resumes(api_base_norm, files_data, names_list)
+                eff_base = resolve_api_base(api_base_norm)
+                res_list = api_post_resumes(eff_base, files_data, names_list)
                 st.success("Upload complete")
                 st.json(res_list)
             except requests.HTTPError as e:
@@ -272,7 +302,8 @@ with match_tab:
             st.warning("Please enter a job_id (create one in the Upload Job tab)")
         else:
             try:
-                data = api_get_match(api_base_norm, job_id_input, k=k)
+                eff_base = resolve_api_base(api_base_norm)
+                data = api_get_match(eff_base, job_id_input, k=k)
                 results: List[Dict[str, Any]] = data.get("results", [])
                 st.caption(data.get("note", ""))
 
@@ -310,7 +341,7 @@ with match_tab:
 
                     # Fetch job details for side-by-side highlighting
                     try:
-                        job = api_get_job(api_base_norm, job_id_input)
+                        job = api_get_job(eff_base, job_id_input)
                         job_desc = job.get("description", "")
                         req_skills = job.get("required_skills", []) or []
                     except Exception:
@@ -347,7 +378,7 @@ with match_tab:
                         context_resume_spans = r.get("context_resume_spans", []) or []
                         try:
                             resume_id = r.get("resume_id")
-                            resume_data = api_get_resume(api_base_norm, resume_id)
+                            resume_data = api_get_resume(eff_base, resume_id)
                             cleaned_text = resume_data.get("cleaned_text", "")
                         except Exception:
                             cleaned_text = ""
