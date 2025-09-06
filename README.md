@@ -4,16 +4,26 @@ emoji: 🚀
 colorFrom: red
 colorTo: red
 sdk: docker
-app_port: 8501
+app_port: 7860
 tags:
 - streamlit
+- fastapi
+- resume-parser
 pinned: false
-short_description: Streamlit template space
+short_description: AI-powered resume parser with FastAPI backend and Streamlit frontend
 ---
 
-# Welcome to Streamlit!
+# AI Resume Parser
 
-Edit `/src/streamlit_app.py` to customize this app to your heart's desire. :heart:
+AI-powered resume parser with vector similarity search and job matching capabilities.
 
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+## Features
+- Resume parsing and analysis
+- Job matching with vector similarity
+- FastAPI backend with Streamlit frontend
+- PostgreSQL with pgvector extension
+
+## Architecture
+- FastAPI API server on `/api/` routes
+- Streamlit UI on root `/` routes  
+- Nginx reverse proxy handling both services
