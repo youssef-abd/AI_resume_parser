@@ -43,5 +43,7 @@ streamlit run src/streamlit_app.py --server.address=127.0.0.1 --server.port=8501
 # Render Nginx config with PORT and start Nginx in foreground
 >&2 echo "Starting Nginx on port ${PORT}"
 export PORT
+# Pre-create Nginx temp directories to avoid permission/missing dir errors
+mkdir -p /tmp/nginx/client_body_temp /tmp/nginx/proxy_temp /tmp/nginx/fastcgi_temp /tmp/nginx/uwsgi_temp /tmp/nginx/scgi_temp
 envsubst '$PORT' < nginx.conf.tmpl > /tmp/nginx.conf
 exec nginx -c /tmp/nginx.conf -g 'daemon off;'
