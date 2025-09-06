@@ -18,6 +18,17 @@ http {
   keepalive_timeout  65;
   server_tokens off;
 
+  # Support websockets
+  map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+
+  # Allow larger uploads
+  client_max_body_size 50m;
+
+  # Proxy tuning
+  proxy_read_timeout 300s;
+  proxy_send_timeout 300s;
+  proxy_connect_timeout 60s;
+
   # Use writable temp directories to avoid permission issues
   client_body_temp_path /tmp/nginx/client_body_temp 1 2;
   proxy_temp_path /tmp/nginx/proxy_temp;
@@ -37,6 +48,8 @@ http {
       proxy_set_header   X-Real-IP $remote_addr;
       proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_set_header   Upgrade $http_upgrade;
+      proxy_set_header   Connection $connection_upgrade;
       proxy_buffering    off;
     }
 
@@ -48,6 +61,8 @@ http {
       proxy_set_header   X-Real-IP $remote_addr;
       proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_set_header   Upgrade $http_upgrade;
+      proxy_set_header   Connection $connection_upgrade;
       proxy_buffering    off;
     }
   }
