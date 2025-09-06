@@ -91,13 +91,20 @@ def detect_mime_type(filename: str) -> str:
 
 
 def api_post_resume(api_base: str, file_bytes: bytes, filename: str, candidate_name: Optional[str]) -> Dict[str, Any]:
-    url = f"{api_base.rstrip('/')}/upload_resume"
+    """Route single-file upload through the tolerant multi-upload endpoint for consistent behavior."""
+    url = f"{api_base.rstrip('/')}/upload_resumes"
     mime = detect_mime_type(filename)
-    files = {"file": (filename, io.BytesIO(file_bytes), mime)}
-    data = {"candidate_name": candidate_name or ""}
-    resp = requests.post(url, files=files, data=data, timeout=120)
+    files: List[Tuple[str, Tuple[str, io.BytesIO, str]]] = [("files", (filename, io.BytesIO(file_bytes), mime))]
+    data: List[Tuple[str, str]] = []
+    if (candidate_name or "").strip():
+        data.append(("candidate_names", (candidate_name or "").strip()))
+    resp = requests.post(url, files=files, data=data, timeout=300)
     resp.raise_for_status()
-    return resp.json()
+    # The multi-upload returns a list; return the first item for single upload UX
+    out = resp.json()
+    if isinstance(out, list) and out:
+        return out[0]
+    return out
 
 
 def api_get_match(api_base: str, job_id: str, k: int = 10) -> Dict[str, Any]:
