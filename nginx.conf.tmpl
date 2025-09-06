@@ -11,7 +11,7 @@ pid /tmp/nginx.pid;
 error_log /dev/stderr info;
 
 http {
-  include       mime.types;
+  include       /etc/nginx/mime.types;
   default_type  application/octet-stream;
   access_log    /dev/stdout;
   sendfile        on;
