@@ -6,6 +6,7 @@ import json
 import os
 import unicodedata
 from pathlib import Path
+from datetime import datetime
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -494,13 +495,18 @@ def readyz():
 
 
 @app.get("/")
-def root():
-    return {
-        "message": "Resume Screener API running",
-        "docs": "/api/docs",
-        "openapi": "/api/openapi.json",
-        "version": app.version,
-    }
+async def root():
+    return {"status": "running", "message": "AI Resume Parser API"}
+
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat() + "Z"}
+
+
+@app.get("/api/health")
+async def api_health():
+    return {"status": "healthy", "service": "api"}
 
 
 @app.post("/upload_resume", response_model=UploadResumeResponse, tags=["resumes"])  # type: ignore[arg-type]
