@@ -13,9 +13,29 @@ import streamlit as st
 # Config
 # ------------------------------
 # Use container networking
-API_BASE_URL = os.getenv("API_BASE_URL", "/api")
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="AI Resume Screener", layout="wide")
+
+
+def normalize_api_base(s: str) -> str:
+    """Ensure the API base URL has a scheme/host.
+    Examples:
+      - '/api' -> 'http://localhost:8000/api'
+      - 'localhost:8000' -> 'http://localhost:8000'
+      - 'http://backend:8000' -> unchanged
+    """
+    val = (s or "").strip()
+    if not val:
+        return "http://localhost:8000"
+    if val.startswith("http://") or val.startswith("https://"):
+        return val
+    if val.startswith("/"):
+        default_host = os.getenv("API_HOST", "http://localhost:8000")
+        return default_host.rstrip("/") + val
+    if "://" not in val:
+        return "http://" + val
+    return val
 
 if "last_job_id" not in st.session_state:
     st.session_state["last_job_id"] = ""
@@ -156,9 +176,10 @@ st.title("AI Resume Screener")
 with st.sidebar:
     st.header("Settings")
     api_base = st.text_input("API Base URL", value=API_BASE_URL, help="Point to your FastAPI server")
+    api_base_norm = normalize_api_base(api_base)
     if st.button("Check Readiness"):
         try:
-            r = requests.get(f"{api_base.rstrip('/')}/readyz", timeout=10)
+            r = requests.get(f"{api_base_norm.rstrip('/')}/readyz", timeout=10)
             ok = r.status_code == 200
             st.success(f"/readyz → {r.status_code} {r.json() if ok else r.text}")
         except Exception as e:
@@ -196,7 +217,7 @@ with job_tab:
 
     if submit:
         try:
-            res = api_post_job_form(api_base, title, description, required_skills_text or None)
+            res = api_post_job_form(api_base_norm, title, description, required_skills_text or None)
             st.session_state["last_job_id"] = res.get("job_id", "")
             st.success("Job created")
             st.json(res)
@@ -230,7 +251,7 @@ with resume_tab:
                 names_list: Optional[List[str]] = None
                 if candidate_names_text.strip():
                     names_list = [line.strip() for line in candidate_names_text.splitlines() if line.strip()]
-                res_list = api_post_resumes(api_base, files_data, names_list)
+                res_list = api_post_resumes(api_base_norm, files_data, names_list)
                 st.success("Upload complete")
                 st.json(res_list)
             except requests.HTTPError as e:
@@ -251,7 +272,7 @@ with match_tab:
             st.warning("Please enter a job_id (create one in the Upload Job tab)")
         else:
             try:
-                data = api_get_match(api_base, job_id_input, k=k)
+                data = api_get_match(api_base_norm, job_id_input, k=k)
                 results: List[Dict[str, Any]] = data.get("results", [])
                 st.caption(data.get("note", ""))
 
@@ -289,7 +310,7 @@ with match_tab:
 
                     # Fetch job details for side-by-side highlighting
                     try:
-                        job = api_get_job(api_base, job_id_input)
+                        job = api_get_job(api_base_norm, job_id_input)
                         job_desc = job.get("description", "")
                         req_skills = job.get("required_skills", []) or []
                     except Exception:
@@ -326,7 +347,7 @@ with match_tab:
                         context_resume_spans = r.get("context_resume_spans", []) or []
                         try:
                             resume_id = r.get("resume_id")
-                            resume_data = api_get_resume(api_base, resume_id)
+                            resume_data = api_get_resume(api_base_norm, resume_id)
                             cleaned_text = resume_data.get("cleaned_text", "")
                         except Exception:
                             cleaned_text = ""
