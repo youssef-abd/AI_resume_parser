@@ -40,6 +40,13 @@ http {
     listen       ${PORT};
     listen       [::]:${PORT};
 
+    # Fast, static health endpoint for Space readiness
+    location = /healthz {
+      default_type application/json;
+      add_header Cache-Control "no-store";
+      return 200 '{"status":"ok","service":"nginx"}';
+    }
+
     # Proxy FastAPI under /api/
     location /api/ {
       proxy_pass         http://127.0.0.1:8000/;
