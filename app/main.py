@@ -552,7 +552,9 @@ async def upload_resume(
         else:
             raise HTTPException(status_code=415, detail="Unsupported file type. Only PDF and DOCX are allowed.")
     except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Failed to parse file: {e}")
+        # Tolerate parse failures: proceed with empty text, record parse error
+        meta = {"type": "pdf" if is_pdf else ("docx" if is_docx else "unknown"), "parse_error": str(e)}
+        raw_text = ""
 
     cleaned_text = clean_text_pipeline(raw_text)
 
