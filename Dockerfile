@@ -20,6 +20,7 @@ RUN mkdir -p /.streamlit && \
     chmod 777 /.cache
 
 COPY requirements.txt ./
+COPY alembic.ini ./
 COPY app/ ./app/
 COPY migrations/ ./migrations/
 COPY src/ ./src/
@@ -38,6 +39,6 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 7860
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD bash -lc "curl -fsS http://127.0.0.1:${PORT:-7860}/healthz || exit 1"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD bash -lc "curl -fsS http://127.0.0.1:${PORT:-7860}/api/healthz || exit 1"
 
 ENTRYPOINT ["./start.sh"]

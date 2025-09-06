@@ -15,7 +15,9 @@ export API_BASE_URL="/api"
 
 # Run database migrations (idempotent)
 >&2 echo "Running Alembic migrations..."
-alembic upgrade head || { echo "Alembic failed" >&2; exit 1; }
+# Explicitly point Alembic to the bundled ini file and working dir
+ALembicCmd="alembic -c /app/alembic.ini upgrade head"
+$ALembicCmd || { echo "Alembic failed" >&2; exit 1; }
 
 # Start FastAPI (internal)
 >&2 echo "Starting FastAPI on 127.0.0.1:8000"
