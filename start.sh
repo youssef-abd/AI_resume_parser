@@ -3,6 +3,8 @@ set -euo pipefail
 
 PORT="${PORT:-7860}"
 export PORT
+# Ensure Python can import the local 'app' package for Alembic env.py
+export PYTHONPATH="/app:${PYTHONPATH:-}"
 
 # Ensure DATABASE_URL is provided (e.g., via Space Secrets)
 if [[ -z "${DATABASE_URL:-}" ]]; then
@@ -15,9 +17,20 @@ export API_BASE_URL="/api"
 
 # Run database migrations (idempotent)
 >&2 echo "Running Alembic migrations..."
-# Explicitly point Alembic to the bundled ini file and working dir
-ALembicCmd="alembic -c /app/alembic.ini upgrade head"
-$ALembicCmd || { echo "Alembic failed" >&2; exit 1; }
+# Find Alembic config path dynamically
+ALEMBIC_CFG=""
+if [[ -f "/app/alembic.ini" ]]; then
+  ALEMBIC_CFG="/app/alembic.ini"
+elif [[ -f "/alembic.ini" ]]; then
+  ALEMBIC_CFG="/alembic.ini"
+else
+  echo "ERROR: alembic.ini not found in /app or /" >&2
+  ls -la / /app || true
+  exit 1
+fi
+>&2 echo "Using Alembic config: ${ALEMBIC_CFG}"
+
+alembic -c "${ALEMBIC_CFG}" upgrade head || { echo "Alembic failed" >&2; exit 1; }
 
 # Start FastAPI (internal)
 >&2 echo "Starting FastAPI on 127.0.0.1:8000"
