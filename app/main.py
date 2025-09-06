@@ -8,7 +8,7 @@ import unicodedata
 from pathlib import Path
 from datetime import datetime
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -446,14 +446,33 @@ app = FastAPI(
     ),
 )
 
-# Allow all origins for initial local development; tighten for production
+# CORS configuration (configurable via FRONTEND_ORIGINS, comma-separated). Using wildcard with no credentials to satisfy browsers.
+origins_env = os.getenv("FRONTEND_ORIGINS", "*")
+origins_list = [o.strip() for o in origins_env.split(",") if o.strip()] if origins_env != "*" else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=origins_list,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# Simple request logging for debugging CORS/proxy issues
+@app.middleware("http")
+async def _log_requests(request: Request, call_next):
+    try:
+        import time as _time
+        start = _time.time()
+        response = await call_next(request)
+        dur_ms = int((_time.time() - start) * 1000)
+        origin = request.headers.get("origin", "-")
+        clen = request.headers.get("content-length", "0")
+        print(f"[REQ] {request.method} {request.url.path} -> {response.status_code} {dur_ms}ms origin={origin} len={clen}")
+        return response
+    except Exception as e:
+        print(f"[REQ] error: {e}")
+        raise
 
 # Initialize database and extensions on startup
 @app.on_event("startup")
@@ -507,6 +526,11 @@ async def health():
 @app.get("/api/health")
 async def api_health():
     return {"status": "healthy", "service": "api"}
+
+
+@app.get("/api/test")
+async def test_endpoint():
+    return {"status": "FastAPI is working", "timestamp": datetime.utcnow().isoformat() + "Z"}
 
 
 @app.post("/upload_resume", response_model=UploadResumeResponse, tags=["resumes"])  # type: ignore[arg-type]

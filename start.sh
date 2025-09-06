@@ -33,6 +33,8 @@ fi
 
 # Set API_BASE_URL for the UI to the internal path behind Nginx
 export API_BASE_URL="/api"
+# Point API_HOST to Nginx front door so Streamlit resolves '/api' to the proxy
+export API_HOST="http://127.0.0.1:${PORT}"
 
 # Run database migrations (idempotent)
 >&2 echo "Running Alembic migrations..."
