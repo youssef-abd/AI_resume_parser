@@ -10,7 +10,7 @@ tags:
 - fastapi
 - resume-parser
 pinned: false
-short_description: AI-powered resume parser with FastAPI backend and Streamlit frontend
+short_description: AI resume parser with job matching and vector search
 ---
 
 # AI Resume Parser
