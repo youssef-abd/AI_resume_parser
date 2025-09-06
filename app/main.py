@@ -469,16 +469,28 @@ def healthz():
 def readyz():
     # Check model loaded
     model_loaded = EMBEDDER is not None and EMBEDDING_DIM > 0
-    # Check DB connectivity
+    # Check DB connectivity and basic schema
     db_ok = False
+    db_info = {}
     try:
+        from sqlalchemy import text as _sql_text
         with get_session() as s:
-            s.execute("SELECT 1")
+            ver = s.execute(_sql_text("SELECT version()")).scalar()
+            has_vec = s.execute(_sql_text("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname='vector')")).scalar()
+            resumes_ok = s.execute(_sql_text("SELECT to_regclass('public.resumes')")).scalar() is not None
+            jobs_ok = s.execute(_sql_text("SELECT to_regclass('public.jobs')")).scalar() is not None
             db_ok = True
-    except Exception:
+            db_info = {
+                "version": ver,
+                "has_vector": bool(has_vec),
+                "tables": {"resumes": bool(resumes_ok), "jobs": bool(jobs_ok)},
+            }
+    except Exception as e:
         db_ok = False
+        db_info = {"error": str(e)}
+
     status = "ok" if (model_loaded and db_ok) else "degraded"
-    return {"status": status, "model_loaded": model_loaded, "db_ok": db_ok, "version": app.version}
+    return {"status": status, "model_loaded": model_loaded, "db_ok": db_ok, "db": db_info, "version": app.version}
 
 
 @app.get("/")

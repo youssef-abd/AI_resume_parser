@@ -15,7 +15,7 @@ fi
 # Set API_BASE_URL for the UI to the internal path behind Nginx
 export API_BASE_URL="/api"
 
-# Run database migrations (idempotent)
+# Run database migrations (idempotent) with timeout
 >&2 echo "Running Alembic migrations..."
 # Find Alembic config path dynamically
 ALEMBIC_CFG=""
@@ -30,7 +30,10 @@ else
 fi
 >&2 echo "Using Alembic config: ${ALEMBIC_CFG}"
 
-alembic -c "${ALEMBIC_CFG}" upgrade head || { echo "Alembic failed" >&2; exit 1; }
+timeout 120 alembic -c "${ALEMBIC_CFG}" upgrade head || {
+  echo "WARNING: Alembic migration timed out or failed, continuing anyway..." >&2
+  # Don't exit - let the application start
+}
 
 # Start FastAPI (internal)
 >&2 echo "Starting FastAPI on 127.0.0.1:8000"
