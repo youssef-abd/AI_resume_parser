@@ -1,0 +1,21 @@
+# Streamlit server configuration for hosted environments (e.g., HF Spaces)
+# Adjusts upload handling to avoid proxy/XSRF-related 403s on /_stcore/upload_file
+
+[server]
+# Bindings
+headless = true
+address = "0.0.0.0"
+port = 7860
+# Upload and message sizes (MB)
+maxUploadSize = 200
+maxMessageSize = 200
+# XSRF/CORS relaxed to cope with reverse proxies that strip/alter headers
+# Note: Disabling XSRF on public deployments reduces protection. Use only if needed.
+enableXsrfProtection = false
+enableCORS = false
+
+[client]
+showErrorDetails = true
+
+[runner]
+enforceSerializableSessionState = false
