@@ -20,56 +20,18 @@ override_js = '''
     
     console.log('Initializing JavaScript override for HuggingFace Spaces...');
     
-    // 1. Override dynamic import to prevent module loading errors
-    const originalImport = window.__import__ || function() {};
-    window.__import__ = function(url) {
-        console.warn('Dynamic import blocked for:', url);
-        return Promise.resolve({});
-    };
-    
-    // 2. Override script tag creation to handle MIME type issues
-    const originalCreateElement = document.createElement;
-    document.createElement = function(tagName) {
-        const element = originalCreateElement.call(this, tagName);
-        
-        if (tagName.toLowerCase() === 'script') {
-            const originalSetAttribute = element.setAttribute;
-            element.setAttribute = function(name, value) {
-                if (name === 'src' && value.includes('.js')) {
-                    console.warn('Blocking problematic script load:', value);
-                    return; // Don't set the src attribute
-                }
-                return originalSetAttribute.call(this, name, value);
-            };
-        }
-        
-        return element;
-    };
-    
-    // 3. Override fetch to return valid JavaScript for .js requests
+    // Override fetch to return valid JavaScript for .js requests
     const originalFetch = window.fetch;
     window.fetch = function(resource, init) {
         if (typeof resource === 'string' && resource.includes('.js')) {
             console.warn('Intercepting JS fetch request:', resource);
-            
-            // Return a promise that resolves to valid JavaScript
-            return Promise.resolve(new Response(
-                '// Fallback JavaScript module\nconsole.log("Module loaded successfully");\nexport default {};',
-                {
-                    status: 200,
-                    statusText: 'OK',
-                    headers: {
-                        'Content-Type': 'application/javascript'
-                    }
-                }
-            ));
         }
         
-        // For non-JS requests, use original fetch
+        // For all requests, use original fetch
         return originalFetch.call(this, resource, init);
     };
     
-    // 4. Prevent error propagation for module-related errors
+    // Prevent error propagation for module-related errors
     window.addEventListener('error', function(e) {
         if (e.message && (
             e.message.includes('Failed to load module') ||
@@ -83,7 +45,7 @@ override_js = '''
         }
     }, true);
     
-    // 5. Override console.error to suppress specific errors
+    // Override console.error to suppress specific errors
     const originalConsoleError = console.error;
     console.error = function(...args) {
         const message = args.join(' ').toLowerCase();
@@ -111,12 +73,7 @@ logging.getLogger('streamlit').setLevel(logging.ERROR)
 warnings.filterwarnings('ignore')
 
 # Configure Streamlit to be more lenient with static assets
-if 'js_fix_applied' not in st.session_state:
-    st.session_state.js_fix_applied = True
-    
-    # Suppress static file warnings
-    logging.getLogger('streamlit.web.server.media_file_handler').setLevel(logging.ERROR)
-    logging.getLogger('streamlit.runtime.memory_media_file_storage').setLevel(logging.ERROR)
+
 
 # ------------------------------
 # Config
