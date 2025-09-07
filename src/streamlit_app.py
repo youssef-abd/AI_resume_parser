@@ -270,6 +270,51 @@ with job_tab:
 # ------------------------------
 with resume_tab:
     st.subheader("Upload Resumes")
+    use_direct = st.checkbox(
+        "Use direct browser upload (bypass Streamlit uploader)",
+        value=False,
+        help="Posts directly to /api/upload_resumes and avoids Streamlit's internal uploader, which may be blocked on some hosts.",
+    )
+    if use_direct:
+        st.info("Direct upload avoids the internal Streamlit upload path and sends files straight to FastAPI via the proxy.")
+        html = """
+        <form id="direct-upload-form" action="/api/upload_resumes" method="post" enctype="multipart/form-data" onsubmit="upload(event)">
+          <label>Select files (PDF/DOCX): <input type="file" name="files" multiple accept=".pdf,.docx" /></label><br/>
+          <label>Candidate Names (optional; one per line, order-matched):<br/>
+            <textarea name="candidate_names" rows="3" placeholder="Alice\nBob"></textarea>
+          </label><br/>
+          <button type="submit">Upload directly</button>
+        </form>
+        <pre id="result" style="white-space:pre-wrap; background:#111; color:#ddd; padding:8px; border-radius:6px; max-height:300px; overflow:auto;"></pre>
+        <script>
+        async function upload(e){
+          e.preventDefault();
+          const form = document.getElementById('direct-upload-form');
+          const fd = new FormData();
+          const input = form.querySelector('input[type=file]');
+          const files = input && input.files ? input.files : [];
+          if(!files || files.length===0){
+            document.getElementById('result').textContent = 'Please select at least one file.';
+            return;
+          }
+          for (let i=0; i<files.length; i++){ fd.append('files', files[i], files[i].name); }
+          const namesRaw = (form.querySelector('textarea[name=candidate_names]')?.value || '').trim();
+          if (namesRaw) {
+            const names = namesRaw.split('\n').map(s=>s.trim()).filter(Boolean);
+            for (const n of names){ fd.append('candidate_names', n); }
+          }
+          try{
+            const resp = await fetch('/api/upload_resumes', { method:'POST', body: fd, credentials: 'omit' });
+            const text = await resp.text();
+            document.getElementById('result').textContent = 'HTTP ' + resp.status + '\n' + text;
+          }catch(err){
+            document.getElementById('result').textContent = 'Error: ' + err;
+          }
+        }
+        </script>
+        """
+        st.components.v1.html(html, height=420)
+        st.stop()
     candidate_names_text = st.text_area(
         "Candidate Names (optional; one per line matching file order)",
         placeholder="Alice\nBob\nCharlie",
