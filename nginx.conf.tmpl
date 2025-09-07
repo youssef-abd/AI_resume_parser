@@ -102,8 +102,8 @@ http {
       if ($request_method = OPTIONS) { return 204; }
     }
 
-    # Workaround: missing hashed font asset -> return 204 and cache
-    location ~* ^/static/media/SourceSansVF-Upright\.ttf\.[A-Za-z0-9]+\.woff2$ {
+    # Workaround: missing hashed font asset -> return 204 and cache (prefix beats /static/)
+    location /static/media/SourceSansVF-Upright.ttf {
       default_type font/woff2;
       add_header Cache-Control "public, max-age=86400" always;
       return 204;
