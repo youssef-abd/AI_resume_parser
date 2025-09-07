@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     nginx \
     gettext-base \
     && rm -rf /var/lib/apt/lists/*
-RUN ls -la /etc/nginx/
+RUN cat /etc/nginx/mime.types
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /.streamlit && \
