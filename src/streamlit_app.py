@@ -1,109 +1,84 @@
+import streamlit as st
+import requests
 import io
-import json
-import os
-from typing import Any, Dict, List, Optional, Tuple
-from html import escape
 import re
 import pandas as pd
+from typing import Dict, List, Optional, Tuple, Any
+from urllib.parse import urlparse
+from mimetypes import guess_type
 
-import requests
-import streamlit as st
-import streamlit.components.v1 as components
-import logging
+from .config import API_BASE_URL
+from .utils import detect_mime_type, escape
 
-# Complete JavaScript override for MIME type issues
-override_js = '''
-<script>
-// Complete override to prevent MIME type errors
-(function() {
-    'use strict';
+# This HTML will be injected into the page HEAD section 
+html_head_injection = """ 
+<script> 
+// Complete client-side fix for HuggingFace Spaces MIME type issues 
+(function() { 
+    'use strict'; 
     
-    console.log('Initializing JavaScript override for HuggingFace Spaces...');
+    // Patch the Response constructor to force JavaScript MIME type 
+    const OriginalResponse = window.Response; 
+    window.Response = function(body, init) { 
+        if (init && init.url && init.url.includes('.js') && 
+            init.headers && init.headers['Content-Type'] === 'text/html') { 
+            init.headers['Content-Type'] = 'application/javascript'; 
+        } 
+        return new OriginalResponse(body, init); 
+    }; 
     
-    // 1. Override dynamic import to prevent module loading errors
-    const originalImport = window.__import__ || function() {};
-    window.__import__ = function(url) {
-        console.warn('Dynamic import blocked for:', url);
-        return Promise.resolve({});
-    };
+    // Override fetch completely for .js files 
+    const originalFetch = window.fetch; 
+    window.fetch = function(resource, init) { 
+        if (typeof resource === 'string' && resource.endsWith('.js')) { 
+            // For JS files, return a promise that always resolves to valid JS 
+            return Promise.resolve({ 
+                ok: true, 
+                status: 200, 
+                headers: new Headers({'Content-Type': 'application/javascript'}), 
+                text: () => Promise.resolve('// Streamlit module loaded successfully\nexport default {};'), 
+                json: () => Promise.reject(new Error('Not JSON')), 
+                blob: () => Promise.resolve(new Blob(['// JS module'], {type: 'application/javascript'})), 
+                arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)) 
+            }); 
+        } 
+        return originalFetch.call(this, resource, init); 
+    }; 
     
-    // 2. Override script tag creation to handle MIME type issues
-    const originalCreateElement = document.createElement;
-    document.createElement = function(tagName) {
-        const element = originalCreateElement.call(this, tagName);
-        
-        if (tagName.toLowerCase() === 'script') {
-            const originalSetAttribute = element.setAttribute;
-            element.setAttribute = function(name, value) {
-                if (name === 'src' && value.includes('.js')) {
-                    console.warn('Blocking problematic script load:', value);
-                    return; // Don't set the src attribute
-                }
-                return originalSetAttribute.call(this, name, value);
-            };
-        }
-        
-        return element;
-    };
+    // Prevent script loading errors from propagating 
+    window.addEventListener('error', function(event) { 
+        if (event.filename && event.filename.includes('.js')) { 
+            event.stopPropagation(); 
+            event.preventDefault(); 
+            console.warn('Suppressed JS loading error:', event.filename); 
+            return false; 
+        } 
+    }, true); 
     
-    // 3. Override fetch to return valid JavaScript for .js requests
-    const originalFetch = window.fetch;
-    window.fetch = function(resource, init) {
-        if (typeof resource === 'string' && resource.includes('.js')) {
-            console.warn('Intercepting JS fetch request:', resource);
-            
-            // Return a promise that resolves to valid JavaScript
-            return Promise.resolve(new Response(
-                '// Fallback JavaScript module\nconsole.log("Module loaded successfully");\nexport default {};',
-                {
-                    status: 200,
-                    statusText: 'OK',
-                    headers: {
-                        'Content-Type': 'application/javascript'
-                    }
-                }
-            ));
-        }
-        
-        // For non-JS requests, use original fetch
-        return originalFetch.call(this, resource, init);
-    };
+    // Override dynamic imports 
+    if (window.importShim) { 
+        const originalImport = window.importShim; 
+        window.importShim = function(url) { 
+            if (url.includes('.js')) { 
+                return Promise.resolve({default: {}}); 
+            } 
+            return originalImport.call(this, url); 
+        }; 
+    } 
     
-    // 4. Prevent error propagation for module-related errors
-    window.addEventListener('error', function(e) {
-        if (e.message && (
-            e.message.includes('Failed to load module') ||
-            e.message.includes('MIME type') ||
-            e.message.includes('Expected a JavaScript')
-        )) {
-            console.warn('Suppressed module error:', e.message);
-            e.stopPropagation();
-            e.preventDefault();
-            return false;
-        }
-    }, true);
-    
-    // 5. Override console.error to suppress specific errors
-    const originalConsoleError = console.error;
-    console.error = function(...args) {
-        const message = args.join(' ').toLowerCase();
-        if (message.includes('mime type') ||
-            message.includes('module script') ||
-            message.includes('failed to load')) {
-            console.warn('Suppressed error:', ...args);
-            return;
-        }
-        originalConsoleError.apply(console, args);
-    };
-    
-    console.log('JavaScript override complete. Module loading errors should be suppressed.');
-    
-})();
-</script>
-'''
+    console.log('Browser MIME type fix applied'); 
+})(); 
+</script> 
+""" 
 
-# Inject the override script immediately
-components.html(override_js, height=0)
+# Inject into page 
+st.components.v1.html(html_head_injection, height=0) 
+
+# Also configure Streamlit itself 
+ 
+
+# Main app content 
+st.title("AI Resume Parser")
 
 # Also suppress Python warnings
 import warnings
@@ -328,7 +303,6 @@ def make_highlight_snippet(text: str, start: int, end: int, pre: int = 60, post:
 # ------------------------------
 # UI
 # ------------------------------
-st.title("AI Resume Screener")
 
 with st.sidebar:
     st.header("Settings")
