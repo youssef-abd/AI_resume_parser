@@ -103,6 +103,11 @@ http {
       add_header Access-Control-Allow-Headers "Content-Type, X-Requested-With" always;
       add_header Cache-Control "no-store, no-cache, must-revalidate" always;
       if ($request_method = OPTIONS) { return 204; }
+
+      # Explicitly set Content-Type for JS files within _stcore/
+      location ~* \.js$ {
+        add_header Content-Type "application/javascript" always;
+      }
     }
 
     # Workaround: missing hashed font asset -> return 204 and cache (prefix beats /static/)
