@@ -263,8 +263,19 @@ def main():
     
     print_section("DEBUG COMPLETE")
     print("🏁 Debug script finished!")
-    print("\nTo run the minimal test app:")
-    print("streamlit run /tmp/minimal_debug_app.py --server.port=8502")
+    
+    if is_container:
+        print("\nTo run the minimal test app:")
+        print("streamlit run /tmp/minimal_debug_app.py --server.port=8502")
+    else:
+        print("\n📋 SUMMARY FOR LOCAL WINDOWS ENVIRONMENT:")
+        print("- This appears to be a local development environment")
+        print("- To debug the actual deployed app, run this script inside the container")
+        print("- To test Streamlit locally, try: streamlit run your_app.py")
+        
+        temp_file = os.path.join(os.environ.get('TEMP', '.'), 'minimal_debug_app.py')
+        if os.path.exists(temp_file):
+            print(f"- Test the minimal app with: streamlit run {temp_file}")
 
 if __name__ == "__main__":
     try:

@@ -16,6 +16,19 @@ import streamlit as st
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="AI Resume Screener", layout="wide")
+# Force a robust system font stack to avoid reliance on hashed static font assets
+st.markdown(
+    """
+    <style>
+      :root, html, body, [data-testid="stAppViewContainer"] * {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+                     Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue",
+                     Arial, sans-serif !important;
+      }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 def normalize_api_base(s: str) -> str:
