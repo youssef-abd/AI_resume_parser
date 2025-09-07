@@ -69,6 +69,18 @@ http {
 
     # Allow large uploads and PUT to Streamlit internal upload endpoint
     location ^~ /_stcore/upload_file/ {
+      # Handle preflight OPTIONS requests explicitly
+      if ($request_method = 'OPTIONS') {
+          add_header 'Access-Control-Allow-Origin' 'https://youssef2106-ai-resume-parser.hf.space';
+          add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
+          add_header 'Access-Control-Allow-Headers' 'Content-Type, X-Requested-With, Authorization, Accept, Origin, X-Session-Id, X-Streamlit-User';
+          add_header 'Access-Control-Allow-Credentials' 'true';
+          add_header 'Access-Control-Max-Age' '86400';
+          add_header 'Content-Type' 'text/plain charset=UTF-8';
+          add_header 'Content-Length' '0';
+          return 204;
+      }
+      
       proxy_pass         http://127.0.0.1:8501;
       proxy_http_version 1.1;
       proxy_set_header   Host $host;
@@ -82,14 +94,27 @@ http {
       proxy_buffering    off;
       proxy_read_timeout 600s;
       proxy_send_timeout 600s;
-      add_header Access-Control-Allow-Origin "*" always;
-      add_header Access-Control-Allow-Methods "GET, POST, PUT, OPTIONS" always;
-      add_header Access-Control-Allow-Headers "Content-Type, X-Requested-With" always;
-      if ($request_method = OPTIONS) { return 204; }
+      
+      # Add CORS headers for all responses (not just OPTIONS)
+      add_header 'Access-Control-Allow-Origin' 'https://youssef2106-ai-resume-parser.hf.space';
+      add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
+      add_header 'Access-Control-Allow-Headers' 'Content-Type, X-Requested-With, Authorization, Accept, Origin, X-Session-Id, X-Streamlit-User';
+      add_header 'Access-Control-Allow-Credentials' 'true';
     }
 
     # General Streamlit internals
     location ^~ /_stcore/ {
+      # Handle preflight OPTIONS requests
+      if ($request_method = 'OPTIONS') {
+          add_header 'Access-Control-Allow-Origin' 'https://youssef2106-ai-resume-parser.hf.space';
+          add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
+          add_header 'Access-Control-Allow-Headers' 'Content-Type, X-Requested-With, Authorization, Accept, Origin, X-Session-Id, X-Streamlit-User';
+          add_header 'Access-Control-Allow-Credentials' 'true';
+          add_header 'Content-Type' 'text/plain charset=UTF-8';
+          add_header 'Content-Length' '0';
+          return 204;
+      }
+      
       proxy_pass         http://127.0.0.1:8501;
       proxy_http_version 1.1;
       proxy_set_header   Host $host;
@@ -101,14 +126,16 @@ http {
       proxy_buffering    off;
       proxy_read_timeout 600s;
       proxy_send_timeout 600s;
-      add_header Access-Control-Allow-Origin "*" always;
-      add_header Access-Control-Allow-Methods "GET, POST, PUT, OPTIONS" always;
-      add_header Access-Control-Allow-Headers "Content-Type, X-Requested-With" always;
-      add_header Cache-Control "no-store, no-cache, must-revalidate" always;
-      if ($request_method = OPTIONS) { return 204; }
+      
+      # Add CORS headers for all responses
+      add_header 'Access-Control-Allow-Origin' 'https://youssef2106-ai-resume-parser.hf.space';
+      add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
+      add_header 'Access-Control-Allow-Headers' 'Content-Type, X-Requested-With, Authorization, Accept, Origin, X-Session-Id, X-Streamlit-User';
+      add_header 'Access-Control-Allow-Credentials' 'true';
+      add_header Cache-Control "no-store, no-cache, must-revalidate";
     }
 
-    # Static assets - proxy to Streamlit (FIXED: removed separate JS/CSS routing)
+    # Static assets - proxy to Streamlit
     location ^~ /static/ {
       proxy_pass         http://127.0.0.1:8501;
       proxy_http_version 1.1;
@@ -125,7 +152,7 @@ http {
       proxy_pass         http://127.0.0.1:8501;
       proxy_http_version 1.1;
       proxy_set_header   Host $host;
-      proxy_set_header   X-Real-IP $remote_addr;
+      proxy_Set_header   X-Real-IP $remote_addr;
       proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header   X-Forwarded-Proto $scheme;
       proxy_set_header   Upgrade $http_upgrade;
