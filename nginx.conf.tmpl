@@ -14,9 +14,7 @@ http {
   include       /etc/nginx/mime.types;
   default_type  application/octet-stream;
 
-  types {
-    application/javascript  js;
-  }
+
   access_log    /dev/stdout;
   sendfile        on;
   keepalive_timeout  65;
@@ -50,6 +48,13 @@ http {
       default_type application/json;
       add_header Cache-Control "no-store";
       return 200 '{"status":"ok","service":"nginx"}';
+    }
+
+    # Workaround: missing hashed font asset -> return 204 and cache (prefix beats /static/)
+    location /static/media/SourceSansVF-Upright.ttf {
+      default_type font/woff2;
+      add_header Cache-Control "public, max-age=86400" always;
+      return 204;
     }
 
     # Proxy FastAPI under /api/
@@ -110,13 +115,6 @@ http {
       add_header Access-Control-Allow-Methods "GET, POST, PUT, OPTIONS" always;
       add_header Access-Control-Allow-Headers "Content-Type, X-Requested-With" always;
       if ($request_method = OPTIONS) { return 204; }
-
-
-    # Workaround: missing hashed font asset -> return 204 and cache (prefix beats /static/)
-    location /static/media/SourceSansVF-Upright.ttf {
-      default_type font/woff2;
-      add_header Cache-Control "public, max-age=86400" always;
-      return 204;
     }
 
     # Handle missing JS modules gracefully (fallback)
