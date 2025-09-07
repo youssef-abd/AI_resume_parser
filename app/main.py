@@ -8,7 +8,7 @@ import unicodedata
 from pathlib import Path
 from datetime import datetime
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -446,14 +446,38 @@ app = FastAPI(
     ),
 )
 
-# Allow all origins for initial local development; tighten for production
+# CORS configuration for browser clients (Axios)
+# FRONTEND_ORIGINS can be set to a comma-separated list of exact origins (e.g., "https://youssef2106-ai-resume-parser.hf.space")
+# If FRONTEND_ORIGINS="*" (default), credentials are disabled to satisfy browser rules.
+_frontend_origins = os.getenv("FRONTEND_ORIGINS", "*")
+if _frontend_origins == "*":
+    _allow_origins = ["*"]
+    _allow_credentials = False
+else:
+    _allow_origins = [o.strip() for o in _frontend_origins.split(",") if o.strip()]
+    _allow_credentials = True
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_allow_origins,
+    allow_credentials=_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# Minimal request logger for diagnosing CORS/proxy issues
+@app.middleware("http")
+async def _log_requests(req: Request, call_next):
+    try:
+        import time as _t
+        t0 = _t.time()
+        resp = await call_next(req)
+        dt = int((_t.time() - t0) * 1000)
+        print(f"[REQ] {req.method} {req.url.path} -> {resp.status_code} {dt}ms origin={req.headers.get('origin','-')}")
+        return resp
+    except Exception as _e:
+        print(f"[REQ] error: {_e}")
+        raise
 
 # Initialize database and extensions on startup
 @app.on_event("startup")
@@ -507,6 +531,11 @@ async def health():
 @app.get("/api/health")
 async def api_health():
     return {"status": "healthy", "service": "api"}
+
+
+@app.get("/api/test")
+async def api_test():
+    return {"status": "ok", "ts": datetime.utcnow().isoformat() + "Z"}
 
 
 @app.post("/upload_resume", response_model=UploadResumeResponse, tags=["resumes"])  # type: ignore[arg-type]
