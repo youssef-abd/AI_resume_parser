@@ -8,6 +8,8 @@ import pandas as pd
 
 import requests
 import streamlit as st
+import logging
+logging.getLogger("streamlit.web.server.media_file_handler").setLevel(logging.ERROR)
 
 # ------------------------------
 # Config
@@ -16,12 +18,13 @@ import streamlit as st
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="AI Resume Screener", layout="wide")
-# Force a robust system font stack to avoid reliance on hashed static font assets
+# Use Google Source Sans Pro with system-font fallback; avoid hashed font assets
 st.markdown(
     """
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600&display=swap');
       :root, html, body, [data-testid="stAppViewContainer"] * {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
                      Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue",
                      Arial, sans-serif !important;
       }
