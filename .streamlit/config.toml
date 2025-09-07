@@ -6,6 +6,8 @@
 headless = true
 address = "0.0.0.0"
 port = 7860
+# Enable serving files from a `static` directory in the running app's directory.
+enableStaticServing = true
 # Upload and message sizes (MB)
 maxUploadSize = 200
 maxMessageSize = 200
