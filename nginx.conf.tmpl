@@ -54,31 +54,16 @@ http {
       return 204;
     }
 
-    # Handle JavaScript modules with proper MIME type - BEFORE general /static/
+    # Handle missing JavaScript files - return valid empty JS instead of HTML
     location ~* ^/static/js/.*\.js$ {
-      proxy_pass         http://127.0.0.1:8501;
-      proxy_http_version 1.1;
-      proxy_set_header   Host $host;
-      proxy_set_header   X-Real-IP $remote_addr;
-      proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header   X-Forwarded-Proto $scheme;
-      proxy_buffering    off;
-      
-      # Override Content-Type if Streamlit returns HTML
-      proxy_hide_header  Content-Type;
-      add_header Content-Type "application/javascript" always;
-      add_header Cache-Control "no-cache" always;
-      
-      # Fallback for 404s
-      proxy_intercept_errors on;
-      error_page 404 = @js_fallback;
-    }
-
-    location @js_fallback {
       default_type application/javascript;
       add_header Content-Type "application/javascript" always;
-      add_header Cache-Control "no-cache" always;
-      return 200 "// JavaScript module not found - using fallback\nconsole.warn('JavaScript module not found: $request_uri');";
+      add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+      add_header Pragma "no-cache" always;
+      add_header Expires "0" always;
+      
+      # Return empty JS module instead of trying to proxy
+      return 200 "// JavaScript module not available in this environment\nconsole.warn('JavaScript module not found: $request_uri');\n// This is a fallback to prevent MIME type errors\nexport default {};";
     }
 
     # Proxy FastAPI under /api/
