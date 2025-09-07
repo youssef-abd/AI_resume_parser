@@ -7,14 +7,11 @@ events {
 # Write PID to a writable location
 pid /tmp/nginx.pid;
 
-
 error_log /dev/stderr info;
 
 http {
   include       /etc/nginx/mime.types;
-
-
-
+  default_type  application/octet-stream;
   access_log    /dev/stdout;
   sendfile        on;
   keepalive_timeout  65;
@@ -50,11 +47,38 @@ http {
       return 200 '{"status":"ok","service":"nginx"}';
     }
 
-    # Workaround: missing hashed font asset -> return 204 and cache (prefix beats /static/)
-    location /static/media/SourceSansVF-Upright.ttf {
+    # Workaround: missing hashed font asset -> return 204 and cache
+    location ~* ^/static/media/SourceSansVF-Upright\.ttf\.[A-Za-z0-9]+\.woff2$ {
       default_type font/woff2;
       add_header Cache-Control "public, max-age=86400" always;
       return 204;
+    }
+
+    # Handle JavaScript modules with proper MIME type - BEFORE general /static/
+    location ~* ^/static/js/.*\.js$ {
+      proxy_pass         http://127.0.0.1:8501;
+      proxy_http_version 1.1;
+      proxy_set_header   Host $host;
+      proxy_set_header   X-Real-IP $remote_addr;
+      proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_buffering    off;
+      
+      # Override Content-Type if Streamlit returns HTML
+      proxy_hide_header  Content-Type;
+      add_header Content-Type "application/javascript" always;
+      add_header Cache-Control "no-cache" always;
+      
+      # Fallback for 404s
+      proxy_intercept_errors on;
+      error_page 404 = @js_fallback;
+    }
+
+    location @js_fallback {
+      default_type application/javascript;
+      add_header Content-Type "application/javascript" always;
+      add_header Cache-Control "no-cache" always;
+      return 200 "// JavaScript module not found - using fallback\nconsole.warn('JavaScript module not found: $request_uri');";
     }
 
     # Proxy FastAPI under /api/
@@ -68,32 +92,6 @@ http {
       proxy_set_header   Upgrade $http_upgrade;
       proxy_set_header   Connection $connection_upgrade;
       proxy_buffering    off;
-    }
-
-    # Allow large uploads and PUT to Streamlit internal upload endpoint
-    # General Streamlit internals
-    location ^~ /_stcore/ {
-      proxy_pass         http://127.0.0.1:8501/;
-      proxy_http_version 1.1;
-      proxy_set_header   Host $host;
-      proxy_set_header   X-Real-IP $remote_addr;
-      proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header   X-Forwarded-Proto $scheme;
-      proxy_set_header   Upgrade $http_upgrade;
-      proxy_set_header   Connection $connection_upgrade;
-      proxy_buffering    off;
-      proxy_read_timeout 600s;
-      proxy_send_timeout 600s;
-      add_header Access-Control-Allow-Origin "*" always;
-      add_header Access-Control-Allow-Methods "GET, POST, PUT, OPTIONS" always;
-      add_header Access-Control-Allow-Headers "Content-Type, X-Requested-With" always;
-      add_header Cache-Control "no-store, no-cache, must-revalidate" always;
-      if ($request_method = OPTIONS) { return 204; }
-
-      # Explicitly set Content-Type for JS files within _stcore/
-      location ~* \.js$ {
-        add_header Content-Type "application/javascript" always;
-      }
     }
 
     # Allow large uploads and PUT to Streamlit internal upload endpoint
@@ -117,25 +115,27 @@ http {
       if ($request_method = OPTIONS) { return 204; }
     }
 
-    # Handle missing JS modules gracefully (fallback)
-    location ~* ^/static/js/.*\.js$ {
-      default_type application/javascript;
-      add_header Content-Type "application/javascript" always;
-
-      root               /app;
-      proxy_intercept_errors on;
-      error_page 404 = @fallback_js;
+    # General Streamlit internals
+    location ^~ /_stcore/ {
+      proxy_pass         http://127.0.0.1:8501/;
+      proxy_http_version 1.1;
+      proxy_set_header   Host $host;
+      proxy_set_header   X-Real-IP $remote_addr;
+      proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_set_header   Upgrade $http_upgrade;
+      proxy_set_header   Connection $connection_upgrade;
+      proxy_buffering    off;
+      proxy_read_timeout 600s;
+      proxy_send_timeout 600s;
+      add_header Access-Control-Allow-Origin "*" always;
+      add_header Access-Control-Allow-Methods "GET, POST, PUT, OPTIONS" always;
+      add_header Access-Control-Allow-Headers "Content-Type, X-Requested-With" always;
+      add_header Cache-Control "no-store, no-cache, must-revalidate" always;
+      if ($request_method = OPTIONS) { return 204; }
     }
 
-    location @fallback_js {
-      default_type application/javascript;
-      add_header Content-Type "application/javascript" always;
-
-      add_header Cache-Control "no-cache" always;
-      return 200 "// Module not found - using fallback\nconsole.warn('JavaScript module not found');";
-    }
-
-    # Static assets
+    # Static assets - proxy to Streamlit
     location ^~ /static/ {
       proxy_pass         http://127.0.0.1:8501/;
       proxy_http_version 1.1;
