@@ -13,6 +13,12 @@ from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+app = FastAPI(
+    title="AI Resume Parser API",
+    version="0.1.0",
+    description="API for parsing resumes, extracting skills, and matching with job descriptions.",
+)
+
 import pdfplumber
 import docx
 import numpy as np
