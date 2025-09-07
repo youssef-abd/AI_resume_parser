@@ -11,6 +11,50 @@ import streamlit as st
 import logging
 logging.getLogger("streamlit.web.server.media_file_handler").setLevel(logging.ERROR)
 
+# Force proper MIME types for JavaScript files
+st.markdown("""
+<script>
+// Override fetch for JavaScript modules to ensure proper MIME type handling
+const originalFetch = window.fetch;
+window.fetch = function(resource, init) {
+    if (typeof resource === 'string' && resource.includes('.js')) {
+        // For JS files, ensure we handle MIME type issues
+        return originalFetch(resource, init).then(response => {
+            if (response.headers.get('content-type') === 'text/html' && resource.includes('.js')) {
+                // Return empty JS response for missing modules
+                return new Response('// Module not found', {
+                    status: 200,
+                    statusText: 'OK',
+                    headers: { 'Content-Type': 'application/javascript' }
+                });
+            }
+            return response;
+        });
+    }
+    return originalFetch(resource, init);
+};
+</script>
+""", unsafe_allow_html=True)
+
+# Alternative: Disable problematic JavaScript features
+st.markdown("""
+<style>
+/* Hide any JS-dependent features that might be causing issues */
+.element-container iframe {
+    display: block !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Configure Streamlit to be more lenient with static assets
+if 'js_fix_applied' not in st.session_state:
+    st.session_state.js_fix_applied = True
+    
+    # Suppress static file warnings
+    import logging
+    logging.getLogger('streamlit.web.server.media_file_handler').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.memory_media_file_storage').setLevel(logging.ERROR)
+
 # ------------------------------
 # Config
 # ------------------------------

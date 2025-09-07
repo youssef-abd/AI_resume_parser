@@ -2,22 +2,19 @@
 # Adjusts upload handling to avoid proxy/XSRF-related 403s on /_stcore/upload_file
 
 [server]
-# Bindings
-headless = true
-address = "0.0.0.0"
-port = 7860
-# Enable serving files from a `static` directory in the running app's directory.
-enableStaticServing = true
-# Upload and message sizes (MB)
-maxUploadSize = 200
-maxMessageSize = 200
-# XSRF/CORS relaxed to cope with reverse proxies that strip/alter headers
-# Note: Disabling XSRF on public deployments reduces protection. Use only if needed.
+enableStaticServing = false
+enableCORS = true
 enableXsrfProtection = false
-enableCORS = false
+
+[browser]
+gatherUsageStats = false
 
 [client]
-showErrorDetails = true
+toolbarMode = "minimal"
 
-[runner]
-enforceSerializableSessionState = false
+# Disable problematic features that might require the missing JS
+[theme]
+base = "light"
+
+[logger]
+level = "error"
