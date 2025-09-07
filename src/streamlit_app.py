@@ -7,8 +7,8 @@ from typing import Dict, List, Optional, Tuple, Any
 from urllib.parse import urlparse
 from mimetypes import guess_type
 
-from .config import API_BASE_URL
-from .utils import detect_mime_type, escape
+from config import API_BASE_URL
+from utils import detect_mime_type, escape
 
 # This HTML will be injected into the page HEAD section 
 html_head_injection = """ 
