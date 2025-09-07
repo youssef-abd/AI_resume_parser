@@ -537,10 +537,6 @@ async def api_health():
 async def api_test():
     return {"status": "ok", "ts": datetime.utcnow().isoformat() + "Z"}
 
-@app.get("/test-deployment")
-async def test_deployment():
-    return {"message": "New deployment working", "timestamp": "2025-09-07"}
-
 
 @app.get("/static/js/{filename:path}")
 async def serve_javascript(filename: str):
