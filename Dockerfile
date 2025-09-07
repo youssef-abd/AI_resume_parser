@@ -10,7 +10,9 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     postgresql-client \
     nginx \
-    gettext-base \n    && rm -rf /var/lib/apt/lists/*\n\nRUN ls -la /etc/nginx/
+    gettext-base \
+    && rm -rf /var/lib/apt/lists/*
+RUN ls -la /etc/nginx/
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /.streamlit && \
