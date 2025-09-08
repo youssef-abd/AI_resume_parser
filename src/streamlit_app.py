@@ -81,7 +81,7 @@ warnings.filterwarnings('ignore')
 # Use container networking
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
-st.set_page_config(page_title="AI Resume Screener", layout="wide")
+st.set_page_config(page_title="AI Resume Screener", layout="wide", initial_sidebar_state="auto")
 # Use Google Source Sans Pro with system-font fallback; avoid hashed font assets
 st.markdown(
     """
@@ -92,6 +92,8 @@ st.markdown(
                      Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue",
                      Arial, sans-serif !important;
       }
+      /* Remove top padding to reduce blank space */
+      .block-container { padding-top: 2rem; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -384,18 +386,18 @@ with resume_tab:
                     st.error(f"Error during direct upload: {e}")
                 except Exception as e:
                     st.error(f"An unexpected error occurred: {e}")
-        st.stop()
-    candidate_names_text = st.text_area(
-        "Candidate Names (optional; one per line matching file order)",
-        placeholder="Alice\nBob\nCharlie",
-        height=100,
-    )
-    uploaded_files = st.file_uploader("Select PDF or DOCX files", type=["pdf", "docx"], accept_multiple_files=True)
-    if st.button("Upload Selected Resumes"):
-        if not uploaded_files:
-            st.warning("Please select at least one resume file")
-        else:
-            try:
+    if not use_direct:
+        candidate_names_text = st.text_area(
+            "Candidate Names (optional; one per line matching file order)",
+            placeholder="Alice\nBob\nCharlie",
+            height=100,
+        )
+        uploaded_files = st.file_uploader("Select PDF or DOCX files", type=["pdf", "docx"], accept_multiple_files=True)
+        if st.button("Upload Selected Resumes"):
+            if not uploaded_files:
+                st.warning("Please select at least one resume file")
+            else:
+                try:
                 files_data: List[Tuple[str, bytes]] = []
                 for up in uploaded_files:
                     files_data.append((up.name, up.read()))
