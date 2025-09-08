@@ -423,8 +423,8 @@ with resume_tab:
                         candidate_names_list_direct = [name.strip() for name in candidate_names_direct.split('\n') if name.strip()]
 
                         with st.spinner("⏳ Uploading resumes directly to server..."):
-                            eff_base = resolve_api_base(api_base_norm)
-                            results_direct = api_post_resumes(eff_base, files_data_direct, candidate_names_list_direct)
+                            # Use API_BASE_URL directly for direct upload (as in original working version)
+                            results_direct = api_post_resumes(API_BASE_URL, files_data_direct, candidate_names_list_direct)
                         
                         st.success(f"✅ Successfully uploaded {len(results_direct)} resume(s)!")
                         
