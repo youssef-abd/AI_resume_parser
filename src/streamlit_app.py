@@ -357,43 +357,33 @@ with resume_tab:
     )
     if use_direct:
         st.info("Direct upload avoids the internal Streamlit upload path and sends files straight to FastAPI via the proxy.")
-        html = """
-        <form id="direct-upload-form" action="/api/upload_resumes" method="post" enctype="multipart/form-data" onsubmit="upload(event)">
-          <label>Select files (PDF/DOCX): <input type="file" name="files" multiple accept=".pdf,.docx" /></label><br/>
-          <label>Candidate Names (optional; one per line, order-matched):<br/>
-            <textarea name="candidate_names" rows="3" placeholder="Alice\nBob"></textarea>
-          </label><br/>
-          <button type="submit">Upload directly</button>
-        </form>
-        <pre id="result" style="white-space:pre-wrap; background:#111; color:#ddd; padding:8px; border-radius:6px; max-height:300px; overflow:auto;"></pre>
-        <script>
-        async function upload(e){
-          e.preventDefault();
-          const form = document.getElementById('direct-upload-form');
-          const fd = new FormData();
-          const input = form.querySelector('input[type=file]');
-          const files = input && input.files ? input.files : [];
-          if(!files || files.length===0){
-            document.getElementById('result').textContent = 'Please select at least one file.';
-            return;
-          }
-          for (let i=0; i<files.length; i++){ fd.append('files', files[i], files[i].name); }
-          const namesRaw = (form.querySelector('textarea[name=candidate_names]')?.value || '').trim();
-          if (namesRaw) {
-            const names = namesRaw.split('\n').map(s=>s.trim()).filter(Boolean);
-            for (const n of names){ fd.append('candidate_names', n); }
-          }
-          try{
-            const resp = await fetch('/api/upload_resumes', { method:'POST', body: fd, credentials: 'omit' });
-            const text = await resp.text();
-            document.getElementById('result').textContent = 'HTTP ' + resp.status + '\n' + text;
-          }catch(err){
-            document.getElementById('result').textContent = 'Error: ' + err;
-          }
-        }
-        </script>
-        """
-        st.components.v1.html(html, height=420)
+        uploaded_files_direct = st.file_uploader("Select PDF or DOCX files for direct upload", type=["pdf", "docx"], accept_multiple_files=True, key="direct_upload_files")
+        candidate_names_direct = st.text_area(
+            "Candidate Names for direct upload (optional; one per line matching file order)",
+            placeholder="Alice\nBob\nCharlie",
+            height=100,
+            key="direct_upload_names"
+        )
+        if st.button("Upload Directly", key="direct_upload_button"):
+            if not uploaded_files_direct:
+                st.warning("Please select at least one resume file for direct upload.")
+            else:
+                try:
+                    files_data_direct: List[Tuple[str, bytes]] = []
+                    for up_direct in uploaded_files_direct:
+                        files_data_direct.append((up_direct.name, up_direct.getvalue()))
+
+                    candidate_names_list_direct = [name.strip() for name in candidate_names_direct.split('\n') if name.strip()]
+
+                    with st.spinner("Uploading resumes directly..."):
+                        results_direct = api_post_resumes(API_BASE_URL, files_data_direct, candidate_names_list_direct)
+                    st.success(f"Successfully uploaded {len(results_direct)} resume(s) directly!")
+                    for res_direct in results_direct:
+                        st.json(res_direct)
+                except requests.exceptions.RequestException as e:
+                    st.error(f"Error during direct upload: {e}")
+                except Exception as e:
+                    st.error(f"An unexpected error occurred: {e}")
         st.stop()
     candidate_names_text = st.text_area(
         "Candidate Names (optional; one per line matching file order)",
