@@ -81,9 +81,8 @@ warnings.filterwarnings('ignore')
 # Use container networking
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
-st.set_page_config(page_title="AI Resume Screener", layout="wide", initial_sidebar_state="auto")
-
-# Fixed CSS to remove blank space and improve styling
+st.set_page_config(page_title="AI Resume Screener", layout="wide")
+# Use Google Source Sans Pro with system-font fallback; avoid hashed font assets
 st.markdown(
     """
     <style>
@@ -92,27 +91,6 @@ st.markdown(
         font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
                      Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue",
                      Arial, sans-serif !important;
-      }
-      /* Remove ALL top padding and margin to eliminate blank space */
-      .block-container { 
-        padding-top: 1rem !important; 
-        padding-bottom: 2rem !important;
-      }
-      .main .block-container {
-        padding-top: 1rem !important;
-        max-width: 100% !important;
-      }
-      /* Remove top margin from first element */
-      .stApp > header {
-        background: transparent !important;
-      }
-      .main > div:first-child {
-        padding-top: 0 !important;
-      }
-      /* Title styling */
-      h1:first-child {
-        margin-top: 0 !important;
-        padding-top: 0 !important;
       }
     </style>
     """,
@@ -372,134 +350,79 @@ with job_tab:
 # ------------------------------
 with resume_tab:
     st.subheader("Upload Resumes")
-    
-    # Upload method selection - moved outside conditional blocks
-    upload_method = st.radio(
-        "Choose upload method:",
-        ["Direct Upload (Recommended)", "Streamlit Upload"],
-        help="Direct upload bypasses Streamlit's internal uploader and may work better on some hosts."
+    use_direct = st.checkbox(
+        "Use direct browser upload (bypass Streamlit uploader)",
+        value=False,
+        help="Posts directly to /api/upload_resumes and avoids Streamlit's internal uploader, which may be blocked on some hosts.",
     )
-    
-    if upload_method == "Direct Upload (Recommended)":
-        st.info("📤 **Direct Upload Mode** - Files are sent directly to FastAPI via the proxy, bypassing Streamlit's internal upload system.")
-        
-        # Direct upload UI
-        with st.container():
-            st.markdown("##### File Selection")
-            uploaded_files_direct = st.file_uploader(
-                "Select PDF or DOCX resume files", 
-                type=["pdf", "docx"], 
-                accept_multiple_files=True, 
-                key="direct_upload_files",
-                help="Select one or more resume files to upload directly"
-            )
-            
-            st.markdown("##### Candidate Names (Optional)")
-            candidate_names_direct = st.text_area(
-                "Enter candidate names, one per line (must match file order)",
-                placeholder="Alice Johnson\nBob Smith\nCharlie Brown",
-                height=100,
-                key="direct_upload_names",
-                help="Optional: Enter candidate names in the same order as your files"
-            )
-            
-            # Upload button and processing
-            upload_col1, upload_col2 = st.columns([1, 3])
-            with upload_col1:
-                upload_button = st.button("🚀 Upload Files", type="primary", key="direct_upload_button")
-            with upload_col2:
-                if uploaded_files_direct:
-                    st.caption(f"Ready to upload {len(uploaded_files_direct)} file(s)")
-            
-            if upload_button:
-                if not uploaded_files_direct:
-                    st.warning("⚠️ Please select at least one resume file to upload.")
-                else:
-                    try:
-                        files_data_direct: List[Tuple[str, bytes]] = []
-                        for up_direct in uploaded_files_direct:
-                            files_data_direct.append((up_direct.name, up_direct.getvalue()))
-
-                        candidate_names_list_direct = [name.strip() for name in candidate_names_direct.split('\n') if name.strip()]
-
-                        with st.spinner("⏳ Uploading resumes directly to server..."):
-                            # Use the direct upload function that bypasses all URL resolution
-                            results_direct = api_post_resumes_direct(files_data_direct, candidate_names_list_direct)
-                        
-                        st.success(f"✅ Successfully uploaded {len(results_direct)} resume(s)!")
-                        
-                        # Display results in a more organized way
-                        st.markdown("##### Upload Results")
-                        for i, res_direct in enumerate(results_direct, 1):
-                            with st.expander(f"Resume {i}: {res_direct.get('candidate_name', 'Unnamed')}"):
-                                st.json(res_direct)
-                                
-                    except requests.exceptions.RequestException as e:
-                        st.error(f"❌ Network error during direct upload: {e}")
-                    except Exception as e:
-                        st.error(f"❌ Unexpected error occurred: {e}")
-    
-    else:  # Streamlit Upload
-        st.warning("⚠️ **Streamlit Upload Mode** - May not work on all hosting platforms due to internal restrictions.")
-        
-        # Streamlit upload UI
-        with st.container():
-            st.markdown("##### Candidate Names (Optional)")
-            candidate_names_text = st.text_area(
-                "Enter candidate names, one per line (must match file order)",
-                placeholder="Alice Johnson\nBob Smith\nCharlie Brown",
-                height=100,
-                key="streamlit_upload_names"
-            )
-            
-            st.markdown("##### File Selection")
-            uploaded_files = st.file_uploader(
-                "Select PDF or DOCX resume files", 
-                type=["pdf", "docx"], 
-                accept_multiple_files=True,
-                key="streamlit_upload_files"
-            )
-            
-            # Upload button and processing
-            upload_col1, upload_col2 = st.columns([1, 3])
-            with upload_col1:
-                upload_button_streamlit = st.button("📤 Upload Files", type="primary", key="streamlit_upload_button")
-            with upload_col2:
-                if uploaded_files:
-                    st.caption(f"Ready to upload {len(uploaded_files)} file(s)")
-            
-            if upload_button_streamlit:
-                if not uploaded_files:
-                    st.warning("⚠️ Please select at least one resume file to upload.")
-                else:
-                    try:
-                        files_data: List[Tuple[str, bytes]] = []
-                        for up in uploaded_files:
-                            files_data.append((up.name, up.read()))
-                        
-                        names_list: Optional[List[str]] = None
-                        if candidate_names_text.strip():
-                            names_list = [line.strip() for line in candidate_names_text.splitlines() if line.strip()]
-                        
-                        with st.spinner("⏳ Uploading resumes via Streamlit..."):
-                            eff_base = resolve_api_base(api_base_norm)
-                            res_list = api_post_resumes(eff_base, files_data, names_list)
-                        
-                        st.success("✅ Upload completed successfully!")
-                        
-                        # Display results
-                        st.markdown("##### Upload Results")
-                        for i, res in enumerate(res_list, 1):
-                            with st.expander(f"Resume {i}: {res.get('candidate_name', 'Unnamed')}"):
-                                st.json(res)
-                                
-                    except requests.HTTPError as e:
-                        st.error(f"❌ HTTP error: {e.response.status_code} {e.response.text}")
-                    except Exception as e:
-                        st.error(f"❌ Error uploading resumes: {e}")
+    if use_direct:
+        st.info("Direct upload avoids the internal Streamlit upload path and sends files straight to FastAPI via the proxy.")
+        html = """
+        <form id="direct-upload-form" action="/api/upload_resumes" method="post" enctype="multipart/form-data" onsubmit="upload(event)">
+          <label>Select files (PDF/DOCX): <input type="file" name="files" multiple accept=".pdf,.docx" /></label><br/>
+          <label>Candidate Names (optional; one per line, order-matched):<br/>
+            <textarea name="candidate_names" rows="3" placeholder="Alice\nBob"></textarea>
+          </label><br/>
+          <button type="submit">Upload directly</button>
+        </form>
+        <pre id="result" style="white-space:pre-wrap; background:#111; color:#ddd; padding:8px; border-radius:6px; max-height:300px; overflow:auto;"></pre>
+        <script>
+        async function upload(e){
+          e.preventDefault();
+          const form = document.getElementById('direct-upload-form');
+          const fd = new FormData();
+          const input = form.querySelector('input[type=file]');
+          const files = input && input.files ? input.files : [];
+          if(!files || files.length===0){
+            document.getElementById('result').textContent = 'Please select at least one file.';
+            return;
+          }
+          for (let i=0; i<files.length; i++){ fd.append('files', files[i], files[i].name); }
+          const namesRaw = (form.querySelector('textarea[name=candidate_names]')?.value || '').trim();
+          if (namesRaw) {
+            const names = namesRaw.split('\n').map(s=>s.trim()).filter(Boolean);
+            for (const n of names){ fd.append('candidate_names', n); }
+          }
+          try{
+            const resp = await fetch('/api/upload_resumes', { method:'POST', body: fd, credentials: 'omit' });
+            const text = await resp.text();
+            document.getElementById('result').textContent = 'HTTP ' + resp.status + '\n' + text;
+          }catch(err){
+            document.getElementById('result').textContent = 'Error: ' + err;
+          }
+        }
+        </script>
+        """
+        st.components.v1.html(html, height=420)
+        st.stop()
+    candidate_names_text = st.text_area(
+        "Candidate Names (optional; one per line matching file order)",
+        placeholder="Alice\nBob\nCharlie",
+        height=100,
+    )
+    uploaded_files = st.file_uploader("Select PDF or DOCX files", type=["pdf", "docx"], accept_multiple_files=True)
+    if st.button("Upload Selected Resumes"):
+        if not uploaded_files:
+            st.warning("Please select at least one resume file")
+        else:
+            try:
+                files_data: List[Tuple[str, bytes]] = []
+                for up in uploaded_files:
+                    files_data.append((up.name, up.read()))
+                names_list: Optional[List[str]] = None
+                if candidate_names_text.strip():
+                    names_list = [line.strip() for line in candidate_names_text.splitlines() if line.strip()]
+                eff_base = resolve_api_base(api_base_norm)
+                res_list = api_post_resumes(eff_base, files_data, names_list)
+                st.success("Upload complete")
+                st.json(res_list)
+            except requests.HTTPError as e:
+                st.error(f"HTTP error: {e.response.status_code} {e.response.text}")
+            except Exception as e:
+                st.error(f"Error uploading resumes: {e}")
 
 # ------------------------------
-# Match Tab - Always visible regardless of upload method
+# Match Tab
 # ------------------------------
 with match_tab:
     st.subheader("Match Results")
