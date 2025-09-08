@@ -398,20 +398,20 @@ with resume_tab:
                 st.warning("Please select at least one resume file")
             else:
                 try:
-                files_data: List[Tuple[str, bytes]] = []
-                for up in uploaded_files:
-                    files_data.append((up.name, up.read()))
-                names_list: Optional[List[str]] = None
-                if candidate_names_text.strip():
-                    names_list = [line.strip() for line in candidate_names_text.splitlines() if line.strip()]
-                eff_base = resolve_api_base(api_base_norm)
-                res_list = api_post_resumes(eff_base, files_data, names_list)
-                st.success("Upload complete")
-                st.json(res_list)
-            except requests.HTTPError as e:
-                st.error(f"HTTP error: {e.response.status_code} {e.response.text}")
-            except Exception as e:
-                st.error(f"Error uploading resumes: {e}")
+                    files_data: List[Tuple[str, bytes]] = []
+                    for up in uploaded_files:
+                        files_data.append((up.name, up.read()))
+                    names_list: Optional[List[str]] = None
+                    if candidate_names_text.strip():
+                        names_list = [line.strip() for line in candidate_names_text.splitlines() if line.strip()]
+                    eff_base = resolve_api_base(api_base_norm)
+                    res_list = api_post_resumes(eff_base, files_data, names_list)
+                    st.success("Upload complete")
+                    st.json(res_list)
+                except requests.HTTPError as e:
+                    st.error(f"HTTP error: {e.response.status_code} {e.response.text}")
+                except Exception as e:
+                    st.error(f"Error uploading resumes: {e}")
 
 # ------------------------------
 # Match Tab
