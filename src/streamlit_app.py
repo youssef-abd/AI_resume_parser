@@ -67,6 +67,69 @@ override_js = '''
 # Inject the override script immediately
 components.html(override_js, height=0)
 
+# Add script to remove unwanted UI text
+cleanup_js = '''
+<script>
+// Remove any unwanted text that might appear in the UI
+function removeUnwantedText() {
+    const unwantedTexts = ['keyboard_double_arrow_right', 'keyboard_arrow_right', 'arrow_right'];
+    
+    // Function to recursively check and clean text nodes
+    function cleanTextNodes(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            unwantedTexts.forEach(unwantedText => {
+                if (node.textContent.includes(unwantedText)) {
+                    node.textContent = node.textContent.replace(new RegExp(unwantedText, 'g'), '');
+                }
+            });
+        } else {
+            for (let child of node.childNodes) {
+                cleanTextNodes(child);
+            }
+        }
+    }
+    
+    // Clean existing content
+    cleanTextNodes(document.body);
+    
+    // Also remove any elements that contain only the unwanted text
+    const allElements = document.querySelectorAll('*');
+    allElements.forEach(element => {
+        unwantedTexts.forEach(unwantedText => {
+            if (element.textContent.trim() === unwantedText) {
+                element.style.display = 'none';
+                element.remove(); // Completely remove the element
+            }
+            // Also check if element contains the unwanted text as part of its content
+            if (element.textContent.includes(unwantedText) && element.children.length === 0) {
+                element.textContent = element.textContent.replace(new RegExp(unwantedText, 'g'), '');
+            }
+        });
+    });
+    
+    // Special handling for common Streamlit elements that might contain unwanted text
+    const streamlitElements = document.querySelectorAll('[data-testid], .stMarkdown, .stText, .element-container');
+    streamlitElements.forEach(element => {
+        unwantedTexts.forEach(unwantedText => {
+            if (element.innerHTML && element.innerHTML.includes(unwantedText)) {
+                element.innerHTML = element.innerHTML.replace(new RegExp(unwantedText, 'g'), '');
+            }
+        });
+    });
+}
+
+// Run cleanup on page load and periodically
+document.addEventListener('DOMContentLoaded', removeUnwantedText);
+setInterval(removeUnwantedText, 1000);
+
+// Also run when Streamlit updates the page
+const observer = new MutationObserver(removeUnwantedText);
+observer.observe(document.body, { childList: true, subtree: true });
+</script>
+'''
+
+components.html(cleanup_js, height=0)
+
 # Also suppress Python warnings
 import warnings
 logging.getLogger('streamlit').setLevel(logging.ERROR)
@@ -251,6 +314,18 @@ st.markdown(
         background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
         border-left: 4px solid #17a2b8;
         border-radius: 8px;
+      }
+      
+      /* Hide any unwanted text that might appear */
+      *:contains("keyboard_double_arrow_right") {
+        display: none !important;
+      }
+      
+      /* Alternative approach - hide elements with specific text content */
+      [data-testid*="keyboard"], 
+      [class*="keyboard"], 
+      [id*="keyboard"] {
+        display: none !important;
       }
     </style>
     """,
@@ -715,12 +790,10 @@ with job_tab:
                     # Action buttons
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        if st.button("📄 Go to Upload Resumes", use_container_width=True):
-                            st.switch_page("📄 Upload Resumes")  # This won't work in current setup, but shows intent
+                        st.info("📄 **Next Step**: Switch to 'Upload Resumes' tab to add candidate files")
                     
                     with col2:
-                        if st.button("🎯 Go to Matching", use_container_width=True):
-                            st.switch_page("🎯 Match & Analyze")  # This won't work in current setup, but shows intent
+                        st.info("🎯 **Then**: Use 'Match & Analyze' tab to find the best candidates")
                     
                     with col3:
                         if st.button("📋 Copy Job ID", use_container_width=True):
@@ -827,6 +900,8 @@ with resume_tab:
             margin: 20px 0;
             color: white;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            min-height: 500px;
+            position: relative;
         }
         .upload-form {
             background: rgba(255,255,255,0.1);
@@ -928,13 +1003,16 @@ with resume_tab:
             border-radius: 12px;
             border: 2px solid #00d4aa;
             box-shadow: 0 8px 25px rgba(0, 212, 170, 0.2);
+            min-height: 150px;
+            position: relative;
+            z-index: 10;
         }
         .result-text {
             color: #00ff88;
             font-family: 'Courier New', monospace;
             font-size: 14px;
             white-space: pre-wrap;
-            max-height: 400px;
+            max-height: 300px;
             overflow-y: auto;
             margin: 0;
             line-height: 1.5;
@@ -970,6 +1048,28 @@ with resume_tab:
             margin-bottom: 8px;
             font-weight: 600;
             font-size: 16px;
+        }
+        
+        /* Ensure all components are fully visible */
+        .upload-container * {
+            box-sizing: border-box;
+        }
+        
+        /* Prevent any overflow issues */
+        .upload-form, .result-container {
+            overflow: visible;
+            position: relative;
+        }
+        
+        /* Ensure result container header is always visible */
+        .result-container h4 {
+            position: sticky;
+            top: 0;
+            background: inherit;
+            z-index: 5;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.3);
         }
     </style>
     
@@ -1035,6 +1135,17 @@ with resume_tab:
             if (!files || files.length === 0) {
                 resultElement.textContent = '⚠️ Please select at least one resume file.';
                 resultContainer.style.display = 'block';
+                resultContainer.style.visibility = 'visible';
+                resultContainer.style.opacity = '1';
+                
+                // Scroll to warning
+                setTimeout(() => {
+                    resultContainer.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center',
+                        inline: 'nearest' 
+                    });
+                }, 100);
                 return;
             }
             
@@ -1094,7 +1205,7 @@ with resume_tab:
                             });
                             
                             result += '✨ All resumes are now ready for matching!\\n';
-                            result += '💡 Go to "Match & Analyze" tab to find the best candidates.';
+                            result += '💡 Switch to "Match & Analyze" tab to find the best candidates.';
                         } else {
                             result += JSON.stringify(jsonData, null, 2);
                         }
@@ -1113,8 +1224,19 @@ with resume_tab:
                 resultElement.textContent = result;
                 resultContainer.style.display = 'block';
                 
-                // Scroll to results
-                resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                // Ensure result container is visible and scroll to it
+                resultContainer.style.display = 'block';
+                resultContainer.style.visibility = 'visible';
+                resultContainer.style.opacity = '1';
+                
+                // Scroll to results with better positioning
+                setTimeout(() => {
+                    resultContainer.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center',
+                        inline: 'nearest' 
+                    });
+                }, 100);
                 
                 // Store results in localStorage for Streamlit to potentially access
                 if (resp.ok) {
@@ -1144,6 +1266,17 @@ with resume_tab:
             } catch (err) {
                 resultElement.textContent = `💥 Network Error: ${err.message}`;
                 resultContainer.style.display = 'block';
+                resultContainer.style.visibility = 'visible';
+                resultContainer.style.opacity = '1';
+                
+                // Scroll to error results
+                setTimeout(() => {
+                    resultContainer.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center',
+                        inline: 'nearest' 
+                    });
+                }, 100);
                 
                 // Store error in localStorage
                 localStorage.setItem('lastUploadResults', JSON.stringify({
@@ -1165,7 +1298,7 @@ with resume_tab:
     </script>
     """
     
-    st.components.v1.html(html, height=600)
+    st.components.v1.html(html, height=800)
     
     # Add Streamlit-based results display for better visibility
     st.markdown("---")
@@ -1274,7 +1407,7 @@ with resume_tab:
     <div id="streamlit-upload-results" style="min-height: 60px;"></div>
     """
     
-    st.components.v1.html(check_results_js, height=150)
+    st.components.v1.html(check_results_js, height=200)
     
     # Show upload instructions
     with st.expander("📝 Upload Instructions & Tips", expanded=False):
@@ -1284,7 +1417,7 @@ with resume_tab:
         2. **Add Names** (Optional): Enter candidate names, one per line, matching file order
         3. **Upload**: Click "Upload Resumes" and wait for the progress bar
         4. **Results**: Success/error messages appear below with full details
-        5. **Next Step**: Copy the Job ID and go to "Match & Analyze" tab
+        5. **Next Step**: Copy the Job ID and switch to "Match & Analyze" tab
         
         #### 💡 Pro Tips:
         - Upload multiple files at once for batch processing
