@@ -221,7 +221,7 @@ st.set_page_config(
     page_title="AI Resume Screener", 
     layout="wide",
     page_icon="🎯",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Enhanced styling with modern UI
@@ -344,9 +344,16 @@ st.markdown(
         box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
       }
       
-      /* Sidebar styling */
-      .css-1d391kg {
-        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+      /* Hide sidebar completely */
+      .css-1d391kg, [data-testid="stSidebar"] {
+        display: none !important;
+      }
+      
+      /* Expand main content to full width */
+      .main .block-container {
+        max-width: 100% !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
       }
       
       /* Remove extra spacing */
@@ -707,67 +714,9 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-with st.sidebar:
-    st.markdown("### ⚙️ Configuration")
-    
-    api_base = st.text_input(
-        "🌐 API Base URL", 
-        value=API_BASE_URL, 
-        help="Point to your FastAPI server endpoint"
-    )
-    api_base_norm = normalize_api_base(api_base)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔍 Check Status", use_container_width=True):
-            with st.spinner("Checking..."):
-                try:
-                    resolved = resolve_api_base(api_base_norm)
-                    r = requests.get(f"{resolved.rstrip('/')}/readyz", timeout=10)
-                    ok = r.status_code == 200
-                    if ok:
-                        st.success(f"✅ API Ready ({r.status_code})")
-                        if r.headers.get('content-type', '').startswith('application/json'):
-                            st.json(r.json())
-                    else:
-                        st.error(f"❌ API Error ({r.status_code})")
-                        st.code(r.text)
-                except Exception as e:
-                    st.error(f"❌ Connection failed: {str(e)}")
-    
-    with col2:
-        st.metric("Endpoint", "Ready" if api_base_norm else "Not Set")
-
-    st.markdown("---")
-    
-    # System info
-    st.markdown("### 📊 System Info")
-    st.markdown("""
-    **Backend Stack:**
-    - 🚀 FastAPI (REST API)
-    - 🧠 sentence-transformers (Embeddings)
-    - 📝 spaCy (NLP Processing)  
-    - 🗄️ PostgreSQL + pgvector (Vector DB)
-    
-    **Features:**
-    - ✨ Semantic similarity matching
-    - 🎯 Skills extraction & analysis
-    - 📈 Composite scoring algorithm
-    - 🔍 Context-aware highlighting
-    """)
-    
-    st.markdown("---")
-    st.markdown("### 💡 Tips")
-    st.info("""
-    **For best results:**
-    - Use detailed job descriptions
-    - Include specific required skills
-    - Upload resumes in PDF/DOCX format
-    - Ensure file names are descriptive
-    """)
-    
-    st.markdown("---")
-    st.caption("🔧 Configure API_BASE_URL environment variable if your backend isn't on localhost:8000")
+# Sidebar removed for cleaner interface
+api_base = API_BASE_URL
+api_base_norm = normalize_api_base(api_base)
 
 # Quick stats dashboard
 col1, col2, col3, col4 = st.columns(4)
