@@ -267,9 +267,11 @@ st.markdown(
       .header-container {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 2rem 0;
-        margin: -2rem -1rem 2rem -1rem;
+        margin: -3rem -1rem 2rem -1rem;
         border-radius: 0 0 20px 20px;
         box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+        position: relative;
+        z-index: 1;
       }
       
       /* Header styling - now handled by custom header container */
@@ -430,6 +432,38 @@ st.markdown(
       
       /* Remove any top margin/padding that might cause blank space */
       .stApp > div:first-child {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+      }
+      
+      /* More aggressive top space removal */
+      .stApp, .stApp > div, .main, .main > div, .block-container, .element-container:first-child {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+      }
+      
+      /* Target Streamlit's root containers */
+      [data-testid="stAppViewContainer"] {
+        padding-top: 0px !important;
+        margin-top: 0px !important;
+      }
+      
+      [data-testid="stHeader"] {
+        height: 0px !important;
+        min-height: 0px !important;
+        display: none !important;
+      }
+      
+      /* Remove any iframe or component spacing */
+      iframe {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+      }
+      
+      /* Force the first element to have no top spacing */
+      body > div:first-child,
+      #root > div:first-child,
+      .stApp > div:first-child > div:first-child {
         margin-top: 0px !important;
         padding-top: 0px !important;
       }
@@ -850,6 +884,42 @@ cleanupObserver.observe(document.body, {
     subtree: true, 
     characterData: true 
 });
+
+// Additional function to remove top spacing
+function removeTopSpacing() {
+    // Target all possible containers that might have top spacing
+    const selectors = [
+        '.stApp',
+        '.main',
+        '.block-container', 
+        '[data-testid="stAppViewContainer"]',
+        '[data-testid="stHeader"]',
+        '.element-container:first-child',
+        'div:first-child'
+    ];
+    
+    selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+            el.style.marginTop = '0px';
+            el.style.paddingTop = '0px';
+        });
+    });
+    
+    // Force the header to be at the very top
+    const headerContainer = document.querySelector('.header-container');
+    if (headerContainer && headerContainer.parentElement) {
+        headerContainer.parentElement.style.marginTop = '0px';
+        headerContainer.parentElement.style.paddingTop = '0px';
+    }
+}
+
+// Run spacing removal frequently
+removeTopSpacing();
+setTimeout(removeTopSpacing, 100);
+setTimeout(removeTopSpacing, 500);
+setTimeout(removeTopSpacing, 1000);
+setInterval(removeTopSpacing, 2000);
 </script>
 """, unsafe_allow_html=True)
 
