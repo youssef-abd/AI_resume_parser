@@ -1231,34 +1231,7 @@ with resume_tab:
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        .result-container {
-            margin-top: 20px;
-            padding: 25px;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            border-radius: 12px;
-            border: 2px solid #00d4aa;
-            box-shadow: 0 8px 25px rgba(0, 212, 170, 0.2);
-            min-height: 200px;
-            max-height: 400px;
-            position: relative;
-            z-index: 10;
-            overflow: visible;
-            width: 100%;
-        }
-        .result-text {
-            color: #00ff88;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            white-space: pre-wrap;
-            max-height: 300px;
-            overflow-y: auto;
-            margin: 0;
-            line-height: 1.5;
-            background: rgba(0,0,0,0.3);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid rgba(0, 255, 136, 0.2);
-        }
+
         .file-info {
             background: rgba(255,255,255,0.1);
             padding: 10px;
@@ -1294,20 +1267,9 @@ with resume_tab:
         }
         
         /* Prevent any overflow issues */
-        .upload-form, .result-container {
+        .upload-form {
             overflow: visible;
             position: relative;
-        }
-        
-        /* Ensure result container header is always visible */
-        .result-container h4 {
-            position: sticky;
-            top: 0;
-            background: inherit;
-            z-index: 5;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-            border-bottom: 1px solid rgba(0, 255, 136, 0.3);
         }
     </style>
     
@@ -1332,10 +1294,7 @@ with resume_tab:
             </form>
         </div>
         
-        <div id="result-container" class="result-container" style="display: none;">
-            <h4 style="margin-top: 0; color: #00ff88;">📊 Upload Results</h4>
-            <pre id="result" class="result-text"></pre>
-        </div>
+
     </div>
 
     <script>
@@ -1362,8 +1321,6 @@ with resume_tab:
             
             const form = document.getElementById('direct-upload-form');
             const uploadBtn = document.getElementById('upload-btn');
-            const resultContainer = document.getElementById('result-container');
-            const resultElement = document.getElementById('result');
             const progressBar = document.getElementById('progress-bar');
             const progressFill = document.getElementById('progress-fill');
             
@@ -1371,19 +1328,7 @@ with resume_tab:
             const files = input && input.files ? input.files : [];
             
             if (!files || files.length === 0) {
-                resultElement.textContent = '⚠️ Please select at least one resume file.';
-                resultContainer.style.display = 'block';
-                resultContainer.style.visibility = 'visible';
-                resultContainer.style.opacity = '1';
-                
-                // Scroll to warning
-                setTimeout(() => {
-                    resultContainer.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'center',
-                        inline: 'nearest' 
-                    });
-                }, 100);
+                alert('⚠️ Please select at least one resume file.');
                 return;
             }
             
@@ -1392,7 +1337,6 @@ with resume_tab:
             uploadBtn.textContent = '⏳ Uploading...';
             progressBar.style.display = 'block';
             progressFill.style.width = '20%';
-            resultContainer.style.display = 'none';
             
             const fd = new FormData();
             
@@ -1459,22 +1403,6 @@ with resume_tab:
                 }
                 
                 progressFill.style.width = '100%';
-                resultElement.textContent = result;
-                resultContainer.style.display = 'block';
-                
-                // Ensure result container is visible and scroll to it
-                resultContainer.style.display = 'block';
-                resultContainer.style.visibility = 'visible';
-                resultContainer.style.opacity = '1';
-                
-                // Scroll to results with better positioning
-                setTimeout(() => {
-                    resultContainer.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'center',
-                        inline: 'nearest' 
-                    });
-                }, 100);
                 
                 // Store results in localStorage for Streamlit to potentially access
                 if (resp.ok) {
@@ -1502,19 +1430,7 @@ with resume_tab:
                 }
                 
             } catch (err) {
-                resultElement.textContent = `💥 Network Error: ${err.message}`;
-                resultContainer.style.display = 'block';
-                resultContainer.style.visibility = 'visible';
-                resultContainer.style.opacity = '1';
-                
-                // Scroll to error results
-                setTimeout(() => {
-                    resultContainer.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'center',
-                        inline: 'nearest' 
-                    });
-                }, 100);
+                console.error('Upload error:', err.message);
                 
                 // Store error in localStorage
                 localStorage.setItem('lastUploadResults', JSON.stringify({
