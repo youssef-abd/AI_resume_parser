@@ -1,4 +1,35 @@
-# AI Resume Parser - .gitignore
+# ===================================
+# AI Resume Parser - Application Specific .gitignore
+# ===================================
+
+# ===================================
+# CRITICAL: Environment & Secrets
+# ===================================
+# Environment files - NEVER commit these!
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+.env.backup
+.env.*
+
+# API Keys and Secrets
+api_keys.txt
+secrets.json
+credentials.json
+service-account.json
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+
+# Database credentials
+database.conf
+db_config.json
 
 # ===================================
 # Python
@@ -26,15 +57,22 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# PyInstaller
-*.manifest
-*.spec
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.python-version
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# Package managers
+Pipfile.lock
+poetry.lock
+.pdm.toml
+__pypackages__/
 
-# Unit test / coverage reports
+# Testing & Coverage
 htmlcov/
 .tox/
 .nox/
@@ -48,115 +86,69 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+test-results/
+test_output/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# poetry
-poetry.lock
-
-# pdm
-.pdm.toml
-
-# PEP 582
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.env.local
-.env.development
-.env.test
-.env.production
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
+# Type checking
 .mypy_cache/
 .dmypy.json
 dmypy.json
-
-# Pyre type checker
 .pyre/
-
-# pytype static type analyzer
 .pytype/
 
-# Cython debug symbols
+# Debugging
 cython_debug/
+*.prof
+*.profile
+.profiling/
+profiling_results/
 
 # ===================================
-# Streamlit
+# AI Resume Parser - Application Components
 # ===================================
+
+# Streamlit specific
 .streamlit/
+.streamlit/secrets.toml
 *.streamlit/
 streamlit_app.log
+streamlit.log
+.streamlit_cache/
 
-# ===================================
 # FastAPI / Uvicorn
-# ===================================
 *.log
 logs/
+log/
 uvicorn.log
 gunicorn.log
+fastapi.log
+app.log
+error.log
+access.log
+debug.log
+
+# Application uploads and processing
+uploads/
+temp_uploads/
+resume_files/
+job_files/
+user_uploads/
+candidate_files/
+parsed_resumes/
+processed_jobs/
+
+# Resume parser cache and temporary files
+similarity_cache/
+embedding_cache/
+vector_cache/
+model_cache/
+processing_temp/
+temp_processing/
 
 # ===================================
-# Database
+# Database & Data Storage
 # ===================================
+# SQLite databases
 *.db
 *.sqlite
 *.sqlite3
@@ -169,30 +161,56 @@ gunicorn.log
 *.dump
 pg_data/
 postgres_data/
+pgdata/
+postgresql_data/
 
-# Database migrations (keep structure, ignore data)
+# Database backups and exports
+database_backup/
+db_exports/
+*.sql.gz
+*.sql.bz2
+
+# Alembic migrations (keep structure, ignore auto-generated)
 migrations/versions/*.py
 !migrations/versions/__init__.py
 !migrations/versions/README
+!migrations/env.py
+!migrations/script.py.mako
+
+# Resume parser database files
+resume_database/
+job_database/
+vector_database/
 
 # ===================================
-# Docker
+# Docker & Containerization
 # ===================================
-# Docker volumes and data
+# Docker volumes and persistent data
 docker-data/
 postgres-data/
 pgdata/
 .docker/
+docker_volumes/
 
-# Docker Compose override files
+# Docker Compose override files (keep templates)
 docker-compose.override.yml
 docker-compose.local.yml
 docker-compose.dev.yml
+docker-compose.prod.yml
+docker-compose.staging.yml
+
+# Docker build context
+.dockerignore.local
+Dockerfile.local
+Dockerfile.dev
+
+# Container logs
+container_logs/
 
 # ===================================
-# AI/ML Models & Data
+# AI/ML Models & Resume Processing
 # ===================================
-# Model files
+# Model files (keep small models, ignore large ones)
 *.pkl
 *.joblib
 *.h5
@@ -205,45 +223,58 @@ docker-compose.dev.yml
 *.bin
 *.safetensors
 
-# Model directories
+# Model directories and caches
 models/
 checkpoints/
 saved_models/
 model_cache/
 transformers_cache/
 sentence_transformers_cache/
-
-# Hugging Face cache
 .cache/huggingface/
 .cache/torch/
 ~/.cache/huggingface/
+~/.cache/torch/
 
-# spaCy models (downloaded)
+# spaCy models (these are large downloads)
 *.spacy
 spacy_models/
+en_core_web_*/
+en_core_web_sm/
+en_core_web_md/
+en_core_web_lg/
 
-# Data files
-data/
-datasets/
-*.csv
-*.json
-*.jsonl
-*.parquet
-*.feather
-*.xlsx
-*.xls
+# Resume processing data
+resume_data/
+job_data/
+training_data/
+test_data/
+sample_data/
 
-# Uploaded files
-uploads/
-temp_uploads/
-resume_files/
-job_files/
-
-# Vector embeddings
+# Vector embeddings and similarity data
 embeddings/
+vectors/
+similarity_matrices/
 *.npy
 *.npz
-vectors/
+*.h5
+
+# Processed documents
+processed_resumes/
+processed_jobs/
+extracted_text/
+parsed_content/
+
+# Resume file formats
+*.pdf
+*.docx
+*.doc
+*.rtf
+*.txt
+# But keep example files
+!examples/*.pdf
+!examples/*.docx
+!sample_data/*.pdf
+!test_data/*.pdf
 
 # ===================================
 # Development Tools
@@ -454,24 +485,60 @@ profiling_results/
 *~
 
 # ===================================
-# Project Specific
+# AI Resume Parser - Project Specific
 # ===================================
-# Resume parser specific
-parsed_resumes/
-processed_jobs/
-similarity_cache/
-embedding_cache/
+# Application state and cache
+app_state/
+session_state/
+cache/
+.cache/
 
-# Streamlit specific
-.streamlit/secrets.toml
+# Resume processing results
+matching_results/
+analysis_results/
+scoring_results/
+ranking_cache/
 
-# FastAPI specific
-.pytest_cache/
+# Job posting data
+job_postings/
+job_cache/
+job_embeddings/
+
+# User session data
+user_sessions/
+session_data/
+
+# Temporary processing files
+temp/
+tmp/
+processing/
+work_dir/
+
+# Application backups
+backups/
+app_backup/
+data_backup/
+
+# Performance monitoring
+performance_logs/
+metrics/
+monitoring/
+
+# Development and testing
+dev_data/
+test_uploads/
+mock_data/
+fixtures/
+
+# Configuration backups
+config_backup/
+settings_backup/
 alembic.ini.backup
 
-# Custom uploads
-user_uploads/
-candidate_files/
+# Export files
+exports/
+downloads/
+generated_reports/
 
 # ===================================
 # Optional: Keep these patterns commented out
@@ -495,16 +562,41 @@ candidate_files/
 # ===================================
 # Force Include Important Files
 # ===================================
-# Use ! to force include important files that might be ignored
+# Always include these critical files even if patterns above might exclude them
 !requirements.txt
 !docker-compose.yml
 !Dockerfile
 !.env.example
+!.env.template
 !README.md
+!README_*.md
 !LICENSE
 !.gitattributes
+!.gitignore
+
+# Application structure
 !alembic.ini
 !migrations/env.py
 !migrations/script.py.mako
 !app/__init__.py
 !src/__init__.py
+!app/main.py
+!src/streamlit_app.py
+
+# Configuration templates
+!config/
+!scripts/
+!nginx.conf.tmpl
+!start.sh
+
+# Documentation and examples
+!docs/
+!examples/
+!tests/
+!.github/
+
+# Keep sample/example files for testing
+!sample_resumes/
+!example_jobs/
+!test_data/sample_*
+!fixtures/sample_*
