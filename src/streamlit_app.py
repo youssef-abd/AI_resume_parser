@@ -267,7 +267,7 @@ st.markdown(
       .header-container {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 2rem 0;
-        margin: -3rem -1rem 2rem -1rem;
+        margin: -5rem -1rem 2rem -1rem;
         border-radius: 0 0 20px 20px;
         box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
         position: relative;
@@ -466,6 +466,29 @@ st.markdown(
       .stApp > div:first-child > div:first-child {
         margin-top: 0px !important;
         padding-top: 0px !important;
+      }
+      
+      /* Ultra aggressive top space removal */
+      html, body {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+      }
+      
+      /* Target any remaining Streamlit containers */
+      .css-1d391kg, .css-18e3th9, .css-1lcbmhc {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+      }
+      
+      /* Force all possible containers to start at top */
+      div[data-testid], section[data-testid] {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+      }
+      
+      /* Remove any toolbar or menu spacing */
+      .stToolbar, .stDeployButton {
+        display: none !important;
       }
     </style>
     """,
@@ -1092,16 +1115,7 @@ with job_tab:
         with job_col1:
             st.info(f"**Job ID:** `{st.session_state['last_job_id']}`\n\n**Title:** {title}")
         
-        with job_col2:
-            if st.button("🔄 Refresh Job", help="Fetch latest job details from API"):
-                try:
-                    eff_base = resolve_api_base(api_base_norm)
-                    job_data = api_get_job(eff_base, st.session_state['last_job_id'])
-                    st.success("Job data refreshed!")
-                    with st.expander("Job Details"):
-                        st.json(job_data)
-                except Exception as e:
-                    st.error(f"Failed to refresh: {e}")
+
 
 # ------------------------------
 # Upload Resume Tab
@@ -1411,9 +1425,37 @@ with resume_tab:
                 let result = '';
                 
                 if (resp.ok) {
-                    result = '✅ Upload completed successfully!';
+                    result = '🎉 UPLOAD SUCCESSFUL! 🎉\\n';
+                    result += '═'.repeat(50) + '\\n\\n';
+                    try {
+                        const jsonData = JSON.parse(text);
+                        if (Array.isArray(jsonData)) {
+                            result += `📊 PROCESSING SUMMARY\\n`;
+                            result += `Total Files Processed: ${jsonData.length}\\n`;
+                            result += '─'.repeat(30) + '\\n\\n';
+                            
+                            jsonData.forEach((item, index) => {
+                                result += `📄 RESUME #${index + 1}\\n`;
+                                result += `├─ ID: ${item.resume_id || 'N/A'}\\n`;
+                                result += `├─ Candidate: ${item.candidate_name || 'Unnamed'}\\n`;
+                                result += `├─ Status: ${item.status || 'Processed'}\\n`;
+                                result += `└─ ${item.filename || 'File processed'}\\n\\n`;
+                            });
+                            
+                            result += '✨ All resumes are now ready for matching!\\n';
+                            result += '💡 Switch to "Match & Analyze" tab to find the best candidates.';
+                        } else {
+                            result += JSON.stringify(jsonData, null, 2);
+                        }
+                    } catch {
+                        result += text;
+                    }
                 } else {
-                    result = `❌ Upload failed (HTTP ${resp.status}): ${text}`;
+                    result = `💥 UPLOAD FAILED 💥\\n`;
+                    result += '═'.repeat(50) + '\\n\\n';
+                    result += `❌ HTTP Status: ${resp.status}\\n`;
+                    result += `📋 Error Details:\\n${text}\\n\\n`;
+                    result += '💡 Please check your files and try again.';
                 }
                 
                 progressFill.style.width = '100%';
@@ -1496,54 +1538,102 @@ with resume_tab:
     
     st.components.v1.html(html, height=1000)
     
-    # Simple upload status display
-    st.markdown("### 📊 Upload Status")
+    # Add Streamlit-based results display for better visibility
+    st.markdown("---")
+    st.markdown("### 📊 Upload Status & Results")
     
-    # Check for upload results in localStorage and display them
-    upload_status_js = """
+    # Initialize session state for upload results
+    if "upload_results" not in st.session_state:
+        st.session_state["upload_results"] = None
+    if "last_upload_check" not in st.session_state:
+        st.session_state["last_upload_check"] = 0
+    
+    # JavaScript to check localStorage and display results with better visibility
+    check_results_js = f"""
     <script>
-        function displayUploadStatus() {
+        function checkUploadResults() {{
             const results = localStorage.getItem('lastUploadResults');
-            const statusDiv = document.getElementById('upload-status-display');
-            
-            if (results && statusDiv) {
-                try {
+            if (results) {{
+                try {{
                     const data = JSON.parse(results);
-                    if (data.success) {
-                        statusDiv.innerHTML = `
-                            <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin: 10px 0;">
-                                <h4 style="color: #155724; margin: 0 0 10px 0;">✅ Upload Successful</h4>
-                                <p style="color: #155724; margin: 0;">Files processed successfully at ${new Date(data.timestamp).toLocaleString()}</p>
-                            </div>
-                        `;
-                    } else {
-                        statusDiv.innerHTML = `
-                            <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 15px; margin: 10px 0;">
-                                <h4 style="color: #721c24; margin: 0 0 10px 0;">❌ Upload Failed</h4>
-                                <p style="color: #721c24; margin: 0;">Error: ${data.error || 'Unknown error'}</p>
-                            </div>
-                        `;
-                    }
-                } catch (e) {
+                    const resultDiv = document.getElementById('streamlit-upload-results');
+                    if (resultDiv) {{
+                        if (data.success) {{
+                            let detailsHtml = '';
+                            if (data.data && Array.isArray(data.data)) {{
+                                detailsHtml = `
+                                    <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.9); border-radius: 8px; border: 1px solid #c3e6cb;">
+                                        <h5 style="color: #155724; margin: 0 0 10px 0;">📋 Processed Resumes:</h5>
+                                        <div style="max-height: 200px; overflow-y: auto;">
+                                `;
+                                data.data.forEach((item, index) => {{
+                                    detailsHtml += `
+                                        <div style="margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #28a745;">
+                                            <strong>📄 Resume ${{index + 1}}:</strong><br>
+                                            <span style="font-family: monospace; font-size: 12px;">ID: ${{item.resume_id || 'N/A'}}</span><br>
+                                            <span style="color: #495057;">👤 Candidate: ${{item.candidate_name || 'Unnamed'}}</span><br>
+                                            <span style="color: #28a745;">✅ Status: ${{item.status || 'Processed'}}</span>
+                                        </div>
+                                    `;
+                                }});
+                                detailsHtml += '</div></div>';
+                            }}
+                            
+                            resultDiv.innerHTML = `
+                                <div style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border: 2px solid #28a745; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);">
+                                    <div style="text-align: center; margin-bottom: 15px;">
+                                        <h3 style="color: #155724; margin: 0; font-size: 1.5rem;">🎉 Upload Successful!</h3>
+                                        <p style="color: #155724; margin: 5px 0 0 0; font-size: 1.1rem;">All resume files have been processed successfully</p>
+                                    </div>
+                                    ${{detailsHtml}}
+                                    <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #c3e6cb;">
+                                        <small style="color: #6c757d;">📅 Uploaded: ${{new Date(data.timestamp).toLocaleString()}}</small>
+                                    </div>
+                                </div>
+                            `;
+                        }} else {{
+                            resultDiv.innerHTML = `
+                                <div style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border: 2px solid #dc3545; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);">
+                                    <div style="text-align: center;">
+                                        <h3 style="color: #721c24; margin: 0 0 10px 0; font-size: 1.5rem;">❌ Upload Failed</h3>
+                                        <div style="background: rgba(255,255,255,0.8); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                                            <p style="color: #721c24; margin: 0; font-weight: 500;">Error Details:</p>
+                                            <code style="color: #dc3545; background: #fff; padding: 5px; border-radius: 4px; display: block; margin-top: 5px; word-break: break-all;">${{data.error || 'Unknown error'}}</code>
+                                            ${{data.status ? `<p style="color: #721c24; margin: 5px 0 0 0;">HTTP Status: ${{data.status}}</p>` : ''}}
+                                        </div>
+                                        <small style="color: #6c757d;">📅 Failed at: ${{new Date(data.timestamp).toLocaleString()}}</small>
+                                    </div>
+                                </div>
+                            `;
+                        }}
+                    }}
+                }} catch (e) {{
                     console.error('Error parsing upload results:', e);
-                }
-            } else if (statusDiv) {
-                statusDiv.innerHTML = `
-                    <div style="background: #d1ecf1; border: 1px solid #17a2b8; border-radius: 8px; padding: 15px; margin: 10px 0;">
-                        <p style="color: #0c5460; margin: 0;">📤 Ready for upload - select files above and click "Upload Resumes"</p>
-                    </div>
-                `;
-            }
-        }
+                }}
+            }} else {{
+                const resultDiv = document.getElementById('streamlit-upload-results');
+                if (resultDiv) {{
+                    resultDiv.innerHTML = `
+                        <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border: 1px solid #17a2b8; border-radius: 8px; padding: 15px; margin: 10px 0; text-align: center;">
+                            <h4 style="color: #0c5460; margin: 0 0 5px 0;">📤 Ready for Upload</h4>
+                            <p style="color: #0c5460; margin: 0; font-size: 0.9rem;">Select resume files above and click "Upload Resumes" to get started</p>
+                        </div>
+                    `;
+                }}
+            }}
+        }}
         
-        // Run on page load and periodically
-        document.addEventListener('DOMContentLoaded', displayUploadStatus);
-        setInterval(displayUploadStatus, 2000);
+        // Check results on page load and periodically
+        document.addEventListener('DOMContentLoaded', checkUploadResults);
+        setInterval(checkUploadResults, 1000);
+        
+        // Force check when Streamlit reruns (triggered by button clicks)
+        setTimeout(checkUploadResults, 100);
     </script>
-    <div id="upload-status-display"></div>
+    <div id="streamlit-upload-results" style="min-height: 60px;"></div>
     """
     
-    st.components.v1.html(upload_status_js, height=100)
+    st.components.v1.html(check_results_js, height=300)
     
 
     
