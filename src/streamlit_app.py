@@ -236,23 +236,38 @@ st.markdown(
                      Arial, sans-serif !important;
       }
       
-      /* Main app styling - Remove top padding to eliminate blank space */
+      /* Main app styling - Remove ALL top padding and spacing */
       .main .block-container {
-        padding-top: 1rem;
+        padding-top: 0rem !important;
         padding-bottom: 2rem;
         max-width: 1200px;
+        margin-top: 0rem !important;
       }
       
       /* Remove default Streamlit header spacing */
       .stApp > header {
         background: transparent;
+        height: 0px !important;
+        min-height: 0px !important;
+      }
+      
+      /* Remove any top spacing from the app container */
+      .stApp {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+      }
+      
+      /* Remove spacing from the main container */
+      .main {
+        padding-top: 0px !important;
+        margin-top: 0px !important;
       }
       
       /* Custom header container */
       .header-container {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 2rem 0;
-        margin: -1rem -1rem 2rem -1rem;
+        margin: 0rem -1rem 2rem -1rem;
         border-radius: 0 0 20px 20px;
         box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
       }
@@ -399,6 +414,24 @@ st.markdown(
       [class*="keyboard"], 
       [id*="keyboard"] {
         display: none !important;
+      }
+      
+      /* Additional CSS to hide unwanted elements */
+      .element-container:has-text("keyboard_double_arrow_right") {
+        display: none !important;
+      }
+      
+      /* Hide any text that matches the unwanted pattern */
+      span:contains("keyboard_double_arrow_right"),
+      div:contains("keyboard_double_arrow_right"),
+      p:contains("keyboard_double_arrow_right") {
+        display: none !important;
+      }
+      
+      /* Remove any top margin/padding that might cause blank space */
+      .stApp > div:first-child {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
       }
     </style>
     """,
@@ -716,21 +749,107 @@ st.markdown("<br>", unsafe_allow_html=True)
 # Tabs with icons and better names
 job_tab, resume_tab, match_tab = st.tabs(["💼 Create Job", "📄 Upload Resumes", "🎯 Match & Analyze"])
 
-# Add additional cleanup for any unwanted text that might appear
+# Add comprehensive cleanup for unwanted text
 st.markdown("""
 <script>
-// Additional cleanup specifically for keyboard_double_arrow_right
-setTimeout(function() {
-    const elements = document.querySelectorAll('*');
-    elements.forEach(el => {
-        if (el.textContent && el.textContent.includes('keyboard_double_arrow_right')) {
-            el.textContent = el.textContent.replace(/keyboard_double_arrow_right/g, '');
-        }
-        if (el.innerHTML && el.innerHTML.includes('keyboard_double_arrow_right')) {
-            el.innerHTML = el.innerHTML.replace(/keyboard_double_arrow_right/g, '');
+// Comprehensive cleanup for keyboard_double_arrow_right text
+function aggressiveCleanup() {
+    const unwantedTexts = [
+        'keyboard_double_arrow_right',
+        'keyboard_arrow_right', 
+        'arrow_right',
+        'keyboard_double_arrow_right ',
+        ' keyboard_double_arrow_right',
+        ' keyboard_double_arrow_right '
+    ];
+    
+    // Method 1: Direct body innerHTML replacement
+    unwantedTexts.forEach(text => {
+        if (document.body.innerHTML.includes(text)) {
+            document.body.innerHTML = document.body.innerHTML.replace(new RegExp(text, 'g'), '');
         }
     });
-}, 100);
+    
+    // Method 2: Target specific areas where the text appears
+    const targetSelectors = [
+        '.main',
+        '.stApp',
+        '[data-testid="stSidebar"]',
+        '.element-container',
+        '.stMarkdown',
+        '.stExpander',
+        'div[role="tabpanel"]',
+        '.block-container'
+    ];
+    
+    targetSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+            unwantedTexts.forEach(text => {
+                if (el.innerHTML && el.innerHTML.includes(text)) {
+                    el.innerHTML = el.innerHTML.replace(new RegExp(text, 'g'), '');
+                }
+                if (el.textContent && el.textContent.includes(text)) {
+                    el.textContent = el.textContent.replace(new RegExp(text, 'g'), '');
+                }
+            });
+        });
+    });
+    
+    // Method 3: Remove any standalone text nodes
+    const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+    );
+    
+    const textNodes = [];
+    let node;
+    while (node = walker.nextNode()) {
+        unwantedTexts.forEach(text => {
+            if (node.textContent.includes(text)) {
+                textNodes.push(node);
+            }
+        });
+    }
+    
+    textNodes.forEach(textNode => {
+        unwantedTexts.forEach(text => {
+            textNode.textContent = textNode.textContent.replace(new RegExp(text, 'g'), '');
+        });
+    });
+    
+    // Method 4: Hide elements that contain only the unwanted text
+    const allElements = document.querySelectorAll('*');
+    allElements.forEach(el => {
+        unwantedTexts.forEach(text => {
+            if (el.textContent && el.textContent.trim() === text) {
+                el.style.display = 'none';
+                el.remove();
+            }
+        });
+    });
+}
+
+// Run cleanup immediately and frequently
+aggressiveCleanup();
+setTimeout(aggressiveCleanup, 50);
+setTimeout(aggressiveCleanup, 100);
+setTimeout(aggressiveCleanup, 200);
+setTimeout(aggressiveCleanup, 500);
+setTimeout(aggressiveCleanup, 1000);
+
+// Continue running cleanup periodically
+setInterval(aggressiveCleanup, 1000);
+
+// Run cleanup when DOM changes
+const cleanupObserver = new MutationObserver(aggressiveCleanup);
+cleanupObserver.observe(document.body, { 
+    childList: true, 
+    subtree: true, 
+    characterData: true 
+});
 </script>
 """, unsafe_allow_html=True)
 
@@ -820,7 +939,6 @@ with job_tab:
                     st.session_state["last_job_id"] = res.get("job_id", "")
                     
                     # Enhanced success display with better visibility
-                    st.balloons()  # Celebration animation
                     
                     # Store job creation result in session state for persistence
                     st.session_state["job_creation_result"] = {
