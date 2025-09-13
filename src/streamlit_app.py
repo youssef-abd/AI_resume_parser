@@ -81,16 +81,131 @@ warnings.filterwarnings('ignore')
 # Use container networking
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
-st.set_page_config(page_title="AI Resume Screener", layout="wide")
-# Use Google Source Sans Pro with system-font fallback; avoid hashed font assets
+st.set_page_config(
+    page_title="AI Resume Screener", 
+    layout="wide",
+    page_icon="🎯",
+    initial_sidebar_state="expanded"
+)
+
+# Enhanced styling with modern UI
 st.markdown(
     """
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+      
       :root, html, body, [data-testid="stAppViewContainer"] * {
-        font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
                      Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue",
                      Arial, sans-serif !important;
+      }
+      
+      /* Main app styling */
+      .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+      }
+      
+      /* Header styling */
+      h1 {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+        font-size: 3rem !important;
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+      
+      /* Tab styling */
+      .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 8px;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+      }
+      
+      .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        padding: 0px 24px;
+        background: transparent;
+        border-radius: 8px;
+        color: #495057;
+        font-weight: 500;
+        border: none;
+        transition: all 0.3s ease;
+      }
+      
+      .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+      
+      /* Form styling */
+      .stTextInput > div > div > input,
+      .stTextArea > div > div > textarea {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+      }
+      
+      .stTextInput > div > div > input:focus,
+      .stTextArea > div > div > textarea:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+      
+      /* Button styling */
+      .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      }
+      
+      .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+      }
+      
+      /* Sidebar styling */
+      .css-1d391kg {
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+      }
+      
+      /* Metrics styling */
+      [data-testid="metric-container"] {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border: 1px solid #e9ecef;
+        padding: 1rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      
+      /* Success/Error message styling */
+      .stSuccess {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border-left: 4px solid #28a745;
+        border-radius: 8px;
+      }
+      
+      .stError {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        border-left: 4px solid #dc3545;
+        border-radius: 8px;
+      }
+      
+      .stInfo {
+        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+        border-left: 4px solid #17a2b8;
+        border-radius: 8px;
       }
     </style>
     """,
@@ -285,153 +400,521 @@ def make_highlight_snippet(text: str, start: int, end: int, pre: int = 60, post:
 # ------------------------------
 # UI
 # ------------------------------
-st.title("AI Resume Screener")
+st.markdown("""
+<div style="text-align: center; margin-bottom: 2rem;">
+    <h1 style="margin-bottom: 0.5rem;">🎯 AI Resume Screener</h1>
+    <p style="font-size: 1.2rem; color: #6c757d; margin: 0;">
+        Intelligent resume matching powered by AI • Fast • Accurate • Scalable
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 with st.sidebar:
-    st.header("Settings")
-    api_base = st.text_input("API Base URL", value=API_BASE_URL, help="Point to your FastAPI server")
+    st.markdown("### ⚙️ Configuration")
+    
+    api_base = st.text_input(
+        "🌐 API Base URL", 
+        value=API_BASE_URL, 
+        help="Point to your FastAPI server endpoint"
+    )
     api_base_norm = normalize_api_base(api_base)
-    if st.button("Check Readiness"):
-        try:
-            resolved = resolve_api_base(api_base_norm)
-            r = requests.get(f"{resolved.rstrip('/')}/readyz", timeout=10)
-            ok = r.status_code == 200
-            st.success(f"/readyz → {r.status_code} {r.json() if ok else r.text}")
-        except Exception as e:
-            st.error(f"Ready check failed: {e}")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔍 Check Status", use_container_width=True):
+            with st.spinner("Checking..."):
+                try:
+                    resolved = resolve_api_base(api_base_norm)
+                    r = requests.get(f"{resolved.rstrip('/')}/readyz", timeout=10)
+                    ok = r.status_code == 200
+                    if ok:
+                        st.success(f"✅ API Ready ({r.status_code})")
+                        if r.headers.get('content-type', '').startswith('application/json'):
+                            st.json(r.json())
+                    else:
+                        st.error(f"❌ API Error ({r.status_code})")
+                        st.code(r.text)
+                except Exception as e:
+                    st.error(f"❌ Connection failed: {str(e)}")
+    
+    with col2:
+        st.metric("Endpoint", "Ready" if api_base_norm else "Not Set")
 
-    st.divider()
-    st.caption("Backend: FastAPI + sentence-transformers + spaCy + PostgreSQL/pgvector")
+    st.markdown("---")
+    
+    # System info
+    st.markdown("### 📊 System Info")
+    st.markdown("""
+    **Backend Stack:**
+    - 🚀 FastAPI (REST API)
+    - 🧠 sentence-transformers (Embeddings)
+    - 📝 spaCy (NLP Processing)  
+    - 🗄️ PostgreSQL + pgvector (Vector DB)
+    
+    **Features:**
+    - ✨ Semantic similarity matching
+    - 🎯 Skills extraction & analysis
+    - 📈 Composite scoring algorithm
+    - 🔍 Context-aware highlighting
+    """)
+    
+    st.markdown("---")
+    st.markdown("### 💡 Tips")
+    st.info("""
+    **For best results:**
+    - Use detailed job descriptions
+    - Include specific required skills
+    - Upload resumes in PDF/DOCX format
+    - Ensure file names are descriptive
+    """)
+    
+    st.markdown("---")
+    st.caption("🔧 Configure API_BASE_URL environment variable if your backend isn't on localhost:8000")
 
-# Tabs
-job_tab, resume_tab, match_tab = st.tabs(["Upload Job", "Upload Resume", "Match Results"])
+# Tabs with icons and better names
+job_tab, resume_tab, match_tab = st.tabs(["💼 Create Job", "📄 Upload Resumes", "🎯 Match & Analyze"])
 
 # ------------------------------
 # Upload Job Tab
 # ------------------------------
 with job_tab:
-    st.subheader("Upload Job")
-    with st.form("job_form"):
-        title = st.text_input("Job Title", value="Software Engineer (Backend/AI)", max_chars=255)
+    st.markdown("### 💼 Create Job Posting")
+    st.markdown("Define the job requirements and description to match against candidate resumes")
+    
+    with st.form("job_form", clear_on_submit=False):
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            title = st.text_input(
+                "🏷️ Job Title", 
+                value="Software Engineer (Backend/AI)", 
+                max_chars=255,
+                help="Enter a clear, descriptive job title"
+            )
+            
+        with col2:
+            st.markdown("#### 📊 Quick Stats")
+            if st.session_state.get("last_job_id"):
+                st.success(f"✅ Last Job ID: `{st.session_state['last_job_id']}`")
+            else:
+                st.info("No job created yet")
+        
         description = st.text_area(
-            "Job Description (paste markdown/plaintext)",
+            "📝 Job Description",
             height=300,
             value=(
                 "**About the Role**\n\n"
                 "We are looking for a Software Engineer with strong backend and data engineering experience who can also apply modern AI/ML techniques.\n\n"
-                "**Responsibilities**\n- Build APIs\n- Data pipelines\n- Deploy AI models\n\n"
-                "**Required Skills**\n- Python, SQL\n- Docker, Kubernetes\n- AWS or GCP\n"
+                "**Responsibilities**\n"
+                "• Build scalable APIs and microservices\n"
+                "• Design and implement data pipelines\n"
+                "• Deploy and maintain AI/ML models in production\n"
+                "• Collaborate with cross-functional teams\n\n"
+                "**Requirements**\n"
+                "• 3+ years of backend development experience\n"
+                "• Strong proficiency in Python and SQL\n"
+                "• Experience with containerization (Docker, Kubernetes)\n"
+                "• Cloud platform experience (AWS, GCP, or Azure)\n"
+                "• Understanding of ML model deployment\n\n"
+                "**Nice to Have**\n"
+                "• Experience with FastAPI or similar frameworks\n"
+                "• Knowledge of vector databases\n"
+                "• MLOps experience"
             ),
+            help="Provide a detailed job description including responsibilities, requirements, and qualifications"
         )
+        
         required_skills_text = st.text_area(
-            "Required Skills (optional, comma or newline separated)",
-            placeholder="python, sql, docker, kubernetes, aws, gcp",
-            height=80,
+            "🎯 Required Skills (Optional)",
+            placeholder="Enter skills separated by commas or new lines:\n\npython, sql, docker, kubernetes, aws, gcp, fastapi, postgresql, redis, machine learning, data engineering",
+            height=100,
+            help="List specific skills that are required for this position. These will be used for skill matching."
         )
-        submit = st.form_submit_button("Create Job")
+        
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            submit = st.form_submit_button("🚀 Create Job Posting", use_container_width=True)
 
     if submit:
-        try:
-            eff_base = resolve_api_base(api_base_norm)
-            res = api_post_job_form(eff_base, title, description, required_skills_text or None)
-            st.session_state["last_job_id"] = res.get("job_id", "")
-            st.success("Job created")
-            st.json(res)
-        except requests.HTTPError as e:
-            st.error(f"HTTP error: {e.response.status_code} {e.response.text}")
-        except Exception as e:
-            st.error(f"Error creating job: {e}")
+        if not title.strip():
+            st.error("❌ Job title is required")
+        elif not description.strip():
+            st.error("❌ Job description is required")
+        else:
+            with st.spinner("Creating job posting..."):
+                try:
+                    eff_base = resolve_api_base(api_base_norm)
+                    res = api_post_job_form(eff_base, title, description, required_skills_text or None)
+                    st.session_state["last_job_id"] = res.get("job_id", "")
+                    
+                    st.success("✅ Job posting created successfully!")
+                    
+                    # Display results in a nice format
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("Job ID", res.get("job_id", "N/A"))
+                        st.metric("Status", res.get("status", "Created"))
+                    
+                    with col2:
+                        if "required_skills" in res and res["required_skills"]:
+                            st.write("**Extracted Skills:**")
+                            skills = res["required_skills"]
+                            if isinstance(skills, list):
+                                st.write(", ".join(skills))
+                            else:
+                                st.write(skills)
+                    
+                    with st.expander("📋 View Full Response", expanded=False):
+                        st.json(res)
+                        
+                except requests.HTTPError as e:
+                    st.error(f"❌ HTTP error: {e.response.status_code}")
+                    with st.expander("Error Details"):
+                        st.code(e.response.text)
+                except Exception as e:
+                    st.error(f"❌ Error creating job: {str(e)}")
 
+    # Show current job info if available
     if st.session_state.get("last_job_id"):
-        st.info(f"Last job_id: {st.session_state['last_job_id']}")
+        st.markdown("---")
+        st.markdown("#### 📋 Current Job Summary")
+        job_col1, job_col2 = st.columns([3, 1])
+        
+        with job_col1:
+            st.info(f"**Job ID:** `{st.session_state['last_job_id']}`\n\n**Title:** {title}")
+        
+        with job_col2:
+            if st.button("🔄 Refresh Job", help="Fetch latest job details from API"):
+                try:
+                    eff_base = resolve_api_base(api_base_norm)
+                    job_data = api_get_job(eff_base, st.session_state['last_job_id'])
+                    st.success("Job data refreshed!")
+                    with st.expander("Job Details"):
+                        st.json(job_data)
+                except Exception as e:
+                    st.error(f"Failed to refresh: {e}")
 
 # ------------------------------
 # Upload Resume Tab
 # ------------------------------
 with resume_tab:
-    st.subheader("Upload Resumes")
-    use_direct = st.checkbox(
-        "Use direct browser upload (bypass Streamlit uploader)",
-        value=False,
-        help="Posts directly to /api/upload_resumes and avoids Streamlit's internal uploader, which may be blocked on some hosts.",
-    )
-    if use_direct:
-        st.info("Direct upload avoids the internal Streamlit upload path and sends files straight to FastAPI via the proxy.")
-        html = """
-        <form id="direct-upload-form" action="/api/upload_resumes" method="post" enctype="multipart/form-data" onsubmit="upload(event)">
-          <label>Select files (PDF/DOCX): <input type="file" name="files" multiple accept=".pdf,.docx" /></label><br/>
-          <label>Candidate Names (optional; one per line, order-matched):<br/>
-            <textarea name="candidate_names" rows="3" placeholder="Alice\nBob"></textarea>
-          </label><br/>
-          <button type="submit">Upload directly</button>
-        </form>
-        <pre id="result" style="white-space:pre-wrap; background:#111; color:#ddd; padding:8px; border-radius:6px; max-height:300px; overflow:auto;"></pre>
-        <script>
-        async function upload(e){
-          e.preventDefault();
-          const form = document.getElementById('direct-upload-form');
-          const fd = new FormData();
-          const input = form.querySelector('input[type=file]');
-          const files = input && input.files ? input.files : [];
-          if(!files || files.length===0){
-            document.getElementById('result').textContent = 'Please select at least one file.';
-            return;
-          }
-          for (let i=0; i<files.length; i++){ fd.append('files', files[i], files[i].name); }
-          const namesRaw = (form.querySelector('textarea[name=candidate_names]')?.value || '').trim();
-          if (namesRaw) {
-            const names = namesRaw.split('\n').map(s=>s.trim()).filter(Boolean);
-            for (const n of names){ fd.append('candidate_names', n); }
-          }
-          try{
-            const resp = await fetch('/api/upload_resumes', { method:'POST', body: fd, credentials: 'omit' });
-            const text = await resp.text();
-            document.getElementById('result').textContent = 'HTTP ' + resp.status + '\n' + text;
-          }catch(err){
-            document.getElementById('result').textContent = 'Error: ' + err;
-          }
+    st.subheader("📄 Upload Resumes")
+    st.markdown("**Direct browser upload** - Files are sent directly to the API for processing")
+    
+    # Enhanced direct upload interface
+    html = """
+    <style>
+        .upload-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+            color: white;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         }
-        </script>
-        """
-        st.components.v1.html(html, height=420)
-        st.stop()
-    candidate_names_text = st.text_area(
-        "Candidate Names (optional; one per line matching file order)",
-        placeholder="Alice\nBob\nCharlie",
-        height=100,
-    )
-    uploaded_files = st.file_uploader("Select PDF or DOCX files", type=["pdf", "docx"], accept_multiple_files=True)
-    if st.button("Upload Selected Resumes"):
-        if not uploaded_files:
-            st.warning("Please select at least one resume file")
-        else:
-            try:
-                files_data: List[Tuple[str, bytes]] = []
-                for up in uploaded_files:
-                    files_data.append((up.name, up.read()))
-                names_list: Optional[List[str]] = None
-                if candidate_names_text.strip():
-                    names_list = [line.strip() for line in candidate_names_text.splitlines() if line.strip()]
-                eff_base = resolve_api_base(api_base_norm)
-                res_list = api_post_resumes(eff_base, files_data, names_list)
-                st.success("Upload complete")
-                st.json(res_list)
-            except requests.HTTPError as e:
-                st.error(f"HTTP error: {e.response.status_code} {e.response.text}")
-            except Exception as e:
-                st.error(f"Error uploading resumes: {e}")
+        .upload-form {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .file-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px dashed rgba(255,255,255,0.5);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .file-input:hover {
+            border-color: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.2);
+        }
+        .file-input::file-selector-button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            margin-right: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .file-input::file-selector-button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .names-textarea {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+            margin-bottom: 20px;
+        }
+        .names-textarea::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        .upload-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        .upload-btn:disabled {
+            background: rgba(255,255,255,0.3);
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 8px;
+            border-left: 4px solid #00d4aa;
+        }
+        .result-text {
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 0;
+        }
+        .file-info {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+            display: none;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4aa, #00ff88);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+    </style>
+    
+    <div class="upload-container">
+        <h3 style="margin-top: 0; text-align: center;">🚀 Resume Upload Center</h3>
+        <div class="upload-form">
+            <form id="direct-upload-form" onsubmit="upload(event)">
+                <label class="label">📁 Select Resume Files (PDF/DOCX)</label>
+                <input type="file" name="files" multiple accept=".pdf,.docx" class="file-input" onchange="showFileInfo()" />
+                <div id="file-info" class="file-info" style="display: none;"></div>
+                
+                <label class="label">👥 Candidate Names (Optional)</label>
+                <textarea name="candidate_names" class="names-textarea" placeholder="Enter candidate names, one per line:&#10;Alice Johnson&#10;Bob Smith&#10;Charlie Brown&#10;&#10;Note: Order should match file selection order"></textarea>
+                
+                <div class="progress-bar" id="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                
+                <button type="submit" class="upload-btn" id="upload-btn">
+                    📤 Upload Resumes
+                </button>
+            </form>
+        </div>
+        
+        <div id="result-container" class="result-container" style="display: none;">
+            <h4 style="margin-top: 0; color: #00ff88;">📊 Upload Results</h4>
+            <pre id="result" class="result-text"></pre>
+        </div>
+    </div>
+
+    <script>
+        function showFileInfo() {
+            const input = document.querySelector('input[type=file]');
+            const fileInfo = document.getElementById('file-info');
+            const files = input.files;
+            
+            if (files && files.length > 0) {
+                let info = `Selected ${files.length} file(s):\\n`;
+                for (let i = 0; i < files.length; i++) {
+                    const size = (files[i].size / 1024 / 1024).toFixed(2);
+                    info += `${i + 1}. ${files[i].name} (${size} MB)\\n`;
+                }
+                fileInfo.textContent = info;
+                fileInfo.style.display = 'block';
+            } else {
+                fileInfo.style.display = 'none';
+            }
+        }
+        
+        async function upload(e) {
+            e.preventDefault();
+            
+            const form = document.getElementById('direct-upload-form');
+            const uploadBtn = document.getElementById('upload-btn');
+            const resultContainer = document.getElementById('result-container');
+            const resultElement = document.getElementById('result');
+            const progressBar = document.getElementById('progress-bar');
+            const progressFill = document.getElementById('progress-fill');
+            
+            const input = form.querySelector('input[type=file]');
+            const files = input && input.files ? input.files : [];
+            
+            if (!files || files.length === 0) {
+                resultElement.textContent = '⚠️ Please select at least one resume file.';
+                resultContainer.style.display = 'block';
+                return;
+            }
+            
+            // Show progress and disable button
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '⏳ Uploading...';
+            progressBar.style.display = 'block';
+            progressFill.style.width = '20%';
+            resultContainer.style.display = 'none';
+            
+            const fd = new FormData();
+            
+            // Add files
+            for (let i = 0; i < files.length; i++) {
+                fd.append('files', files[i], files[i].name);
+            }
+            
+            // Add candidate names if provided
+            const namesRaw = (form.querySelector('textarea[name=candidate_names]')?.value || '').trim();
+            if (namesRaw) {
+                const names = namesRaw.split('\\n').map(s => s.trim()).filter(Boolean);
+                for (const n of names) {
+                    fd.append('candidate_names', n);
+                }
+            }
+            
+            try {
+                progressFill.style.width = '60%';
+                
+                const resp = await fetch('/api/upload_resumes', {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'omit'
+                });
+                
+                progressFill.style.width = '90%';
+                
+                const text = await resp.text();
+                let result = '';
+                
+                if (resp.ok) {
+                    result = '✅ Upload Successful!\\n\\n';
+                    try {
+                        const jsonData = JSON.parse(text);
+                        if (Array.isArray(jsonData)) {
+                            result += `📊 Processed ${jsonData.length} resume(s):\\n\\n`;
+                            jsonData.forEach((item, index) => {
+                                result += `${index + 1}. Resume ID: ${item.resume_id || 'N/A'}\\n`;
+                                result += `   Candidate: ${item.candidate_name || 'Unnamed'}\\n`;
+                                result += `   Status: ${item.status || 'Unknown'}\\n\\n`;
+                            });
+                        } else {
+                            result += JSON.stringify(jsonData, null, 2);
+                        }
+                    } catch {
+                        result += text;
+                    }
+                } else {
+                    result = `❌ Upload Failed (HTTP ${resp.status})\\n\\n${text}`;
+                }
+                
+                progressFill.style.width = '100%';
+                resultElement.textContent = result;
+                resultContainer.style.display = 'block';
+                
+            } catch (err) {
+                resultElement.textContent = `💥 Network Error: ${err.message}`;
+                resultContainer.style.display = 'block';
+            } finally {
+                // Reset UI
+                setTimeout(() => {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '📤 Upload Resumes';
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 1000);
+            }
+        }
+    </script>
+    """
+    
+    st.components.v1.html(html, height=600)
 
 # ------------------------------
 # Match Tab
 # ------------------------------
 with match_tab:
-    st.subheader("Match Results")
-    job_id_input = st.text_input("Job ID", value=st.session_state.get("last_job_id", ""))
-    k = st.slider("Top K", min_value=1, max_value=50, value=10)
+    st.markdown("### 🎯 Resume Matching Results")
+    st.markdown("Analyze and rank resumes against your job requirements using AI-powered matching")
+    
+    # Input section with better layout
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        job_id_input = st.text_input(
+            "🆔 Job ID", 
+            value=st.session_state.get("last_job_id", ""),
+            help="Enter the Job ID from the job creation step"
+        )
+    
+    with col2:
+        k = st.slider(
+            "📊 Top K Results", 
+            min_value=1, 
+            max_value=50, 
+            value=10,
+            help="Number of top matches to display"
+        )
+    
+    with col3:
+        st.markdown("#### 🚀 Actions")
+        match_button = st.button("🔍 Run Matching", use_container_width=True, type="primary")
 
-    if st.button("Run Match"):
+    if match_button:
         if not job_id_input:
-            st.warning("Please enter a job_id (create one in the Upload Job tab)")
+            st.warning("⚠️ Please enter a job_id (create one in the Upload Job tab)")
         else:
             try:
                 eff_base = resolve_api_base(api_base_norm)
