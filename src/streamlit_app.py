@@ -344,9 +344,15 @@ st.markdown(
         box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
       }
       
-      /* Hide sidebar completely */
-      .css-1d391kg, [data-testid="stSidebar"] {
-        display: none !important;
+      /* Sidebar styling - collapsed by default */
+      [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+      }
+      
+      /* Sidebar collapsed state */
+      [data-testid="stSidebar"][aria-expanded="false"] {
+        width: 0px !important;
+        min-width: 0px !important;
       }
       
       /* Expand main content to full width */
@@ -714,9 +720,34 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar removed for cleaner interface
-api_base = API_BASE_URL
-api_base_norm = normalize_api_base(api_base)
+with st.sidebar:
+    st.markdown("### ⚙️ Configuration")
+    
+    api_base = st.text_input(
+        "🌐 API Base URL", 
+        value=API_BASE_URL, 
+        help="Point to your FastAPI server endpoint"
+    )
+    api_base_norm = normalize_api_base(api_base)
+    
+    if st.button("🔍 Check Status", use_container_width=True):
+        with st.spinner("Checking..."):
+            try:
+                resolved = resolve_api_base(api_base_norm)
+                r = requests.get(f"{resolved.rstrip('/')}/readyz", timeout=10)
+                ok = r.status_code == 200
+                if ok:
+                    st.success(f"✅ API Ready ({r.status_code})")
+                else:
+                    st.error(f"❌ API Error ({r.status_code})")
+            except Exception as e:
+                st.error(f"❌ Connection failed: {str(e)}")
+    
+    st.markdown("---")
+    st.markdown("### 💡 Quick Info")
+    st.caption("🎯 AI-powered resume matching")
+    st.caption("⚡ Vector similarity search")
+    st.caption("📊 Skills analysis & scoring")
 
 # Quick stats dashboard
 col1, col2, col3, col4 = st.columns(4)
@@ -1511,6 +1542,16 @@ with resume_tab:
 with match_tab:
     st.markdown("### 🎯 Resume Matching Results")
     st.markdown("Analyze and rank resumes against your job requirements using AI-powered matching")
+    
+    # Score explanation tip
+    st.info("""
+    📊 **Understanding the Scores:**
+    - **Cosine Score** (0-1): Semantic similarity between job description and resume content
+    - **Skills Overlap** (0-1): Percentage of required skills found in the resume  
+    - **Composite Score** (0-1): Combined weighted score considering both semantic similarity and skills match
+    
+    Higher scores indicate better matches. The composite score provides the most balanced ranking.
+    """)
     
     # Input section with better layout
     col1, col2, col3 = st.columns([2, 1, 1])
