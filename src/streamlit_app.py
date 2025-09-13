@@ -263,11 +263,11 @@ st.markdown(
         margin-top: 0px !important;
       }
       
-      /* Custom header container */
+      /* Custom header container - eliminate all top spacing */
       .header-container {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 2rem 0;
-        margin: 0rem -1rem 2rem -1rem;
+        margin: -2rem -1rem 2rem -1rem;
         border-radius: 0 0 20px 20px;
         box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
       }
@@ -860,35 +860,15 @@ with job_tab:
     st.markdown("### 💼 Create Job Posting")
     st.markdown("Define the job requirements and description to match against candidate resumes")
     
-    # Add info about text format flexibility
-    st.info("""
-    💡 **Text Format Flexibility**: The job description accepts ANY text format:
-    - ✅ Plain paragraphs
-    - ✅ Bullet points and lists  
-    - ✅ Markdown formatting
-    - ✅ Mixed formats
-    - ✅ Copy-paste from any source
-    
-    The AI will automatically understand and process your content regardless of formatting!
-    """)
+
     
     with st.form("job_form", clear_on_submit=False):
-        col1, col2 = st.columns([2, 1])
-        
-        with col1:
-            title = st.text_input(
-                "🏷️ Job Title", 
-                value="Software Engineer (Backend/AI)", 
-                max_chars=255,
-                help="Enter a clear, descriptive job title"
-            )
-            
-        with col2:
-            st.markdown("#### 📊 Quick Stats")
-            if st.session_state.get("last_job_id"):
-                st.success(f"✅ Last Job ID: `{st.session_state['last_job_id']}`")
-            else:
-                st.info("No job created yet")
+        title = st.text_input(
+            "🏷️ Job Title", 
+            value="Software Engineer (Backend/AI)", 
+            max_chars=255,
+            help="Enter a clear, descriptive job title"
+        )
         
         description = st.text_area(
             "📝 Job Description",
@@ -1445,6 +1425,55 @@ with resume_tab:
     """
     
     st.components.v1.html(html, height=1000)
+    
+    # Simple upload status display
+    st.markdown("### 📊 Upload Status")
+    
+    # Check for upload results in localStorage and display them
+    upload_status_js = """
+    <script>
+        function displayUploadStatus() {
+            const results = localStorage.getItem('lastUploadResults');
+            const statusDiv = document.getElementById('upload-status-display');
+            
+            if (results && statusDiv) {
+                try {
+                    const data = JSON.parse(results);
+                    if (data.success) {
+                        statusDiv.innerHTML = `
+                            <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                                <h4 style="color: #155724; margin: 0 0 10px 0;">✅ Upload Successful</h4>
+                                <p style="color: #155724; margin: 0;">Files processed successfully at ${new Date(data.timestamp).toLocaleString()}</p>
+                            </div>
+                        `;
+                    } else {
+                        statusDiv.innerHTML = `
+                            <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                                <h4 style="color: #721c24; margin: 0 0 10px 0;">❌ Upload Failed</h4>
+                                <p style="color: #721c24; margin: 0;">Error: ${data.error || 'Unknown error'}</p>
+                            </div>
+                        `;
+                    }
+                } catch (e) {
+                    console.error('Error parsing upload results:', e);
+                }
+            } else if (statusDiv) {
+                statusDiv.innerHTML = `
+                    <div style="background: #d1ecf1; border: 1px solid #17a2b8; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                        <p style="color: #0c5460; margin: 0;">📤 Ready for upload - select files above and click "Upload Resumes"</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Run on page load and periodically
+        document.addEventListener('DOMContentLoaded', displayUploadStatus);
+        setInterval(displayUploadStatus, 2000);
+    </script>
+    <div id="upload-status-display"></div>
+    """
+    
+    st.components.v1.html(upload_status_js, height=100)
     
 
     
