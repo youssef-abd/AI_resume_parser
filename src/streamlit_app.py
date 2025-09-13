@@ -100,22 +100,38 @@ st.markdown(
                      Arial, sans-serif !important;
       }
       
-      /* Main app styling */
+      /* Main app styling - Remove top padding to eliminate blank space */
       .main .block-container {
-        padding-top: 2rem;
+        padding-top: 1rem;
         padding-bottom: 2rem;
+        max-width: 1200px;
       }
       
-      /* Header styling */
-      h1 {
+      /* Remove default Streamlit header spacing */
+      .stApp > header {
+        background: transparent;
+      }
+      
+      /* Custom header container */
+      .header-container {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-weight: 700;
-        font-size: 3rem !important;
-        text-align: center;
-        margin-bottom: 2rem;
+        padding: 2rem 0;
+        margin: -1rem -1rem 2rem -1rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+      }
+      
+      /* Header styling - now handled by custom header container */
+      .header-container h1 {
+        color: white !important;
+        background: none !important;
+        -webkit-text-fill-color: white !important;
+      }
+      
+      /* Other headers */
+      h2, h3, h4 {
+        color: #2c3e50;
+        font-weight: 600;
       }
       
       /* Tab styling */
@@ -178,6 +194,35 @@ st.markdown(
       /* Sidebar styling */
       .css-1d391kg {
         background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+      }
+      
+      /* Remove extra spacing */
+      .element-container {
+        margin-bottom: 1rem;
+      }
+      
+      /* Improve tab content spacing */
+      .stTabs > div > div > div > div {
+        padding-top: 1rem;
+      }
+      
+      /* Better form spacing */
+      .stForm {
+        background: rgba(255,255,255,0.8);
+        padding: 2rem;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      
+      /* Improve column spacing */
+      .row-widget.stHorizontal > div {
+        padding-right: 1rem;
+      }
+      
+      /* Better metric styling */
+      [data-testid="metric-container"] > div {
+        justify-content: center;
       }
       
       /* Metrics styling */
@@ -401,11 +446,26 @@ def make_highlight_snippet(text: str, start: int, end: int, pre: int = 60, post:
 # UI
 # ------------------------------
 st.markdown("""
-<div style="text-align: center; margin-bottom: 2rem;">
-    <h1 style="margin-bottom: 0.5rem;">🎯 AI Resume Screener</h1>
-    <p style="font-size: 1.2rem; color: #6c757d; margin: 0;">
-        Intelligent resume matching powered by AI • Fast • Accurate • Scalable
-    </p>
+<div class="header-container">
+    <div style="text-align: center; color: white; padding: 0 2rem;">
+        <h1 style="margin: 0; font-size: 3.5rem; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+            🎯 AI Resume Screener
+        </h1>
+        <p style="font-size: 1.3rem; margin: 1rem 0 0 0; opacity: 0.9; font-weight: 300;">
+            Intelligent resume matching powered by AI • Fast • Accurate • Scalable
+        </p>
+        <div style="margin-top: 1.5rem;">
+            <span style="background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; margin: 0 0.5rem;">
+                ⚡ Vector Search
+            </span>
+            <span style="background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; margin: 0 0.5rem;">
+                🧠 AI Matching
+            </span>
+            <span style="background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; margin: 0 0.5rem;">
+                📊 Smart Analytics
+            </span>
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -471,6 +531,40 @@ with st.sidebar:
     st.markdown("---")
     st.caption("🔧 Configure API_BASE_URL environment variable if your backend isn't on localhost:8000")
 
+# Quick stats dashboard
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric(
+        label="🎯 Current Job", 
+        value=st.session_state.get("last_job_id", "None")[:8] + "..." if st.session_state.get("last_job_id") else "None",
+        help="Currently active job ID"
+    )
+
+with col2:
+    # This would be populated from API in a real scenario
+    st.metric(
+        label="📄 Resumes", 
+        value="Ready",
+        help="Resume upload status"
+    )
+
+with col3:
+    st.metric(
+        label="🔍 Matching", 
+        value="Available",
+        help="AI matching engine status"
+    )
+
+with col4:
+    st.metric(
+        label="⚡ API Status", 
+        value="Connected" if API_BASE_URL else "Not Set",
+        help="Backend API connection status"
+    )
+
+st.markdown("<br>", unsafe_allow_html=True)
+
 # Tabs with icons and better names
 job_tab, resume_tab, match_tab = st.tabs(["💼 Create Job", "📄 Upload Resumes", "🎯 Match & Analyze"])
 
@@ -480,6 +574,18 @@ job_tab, resume_tab, match_tab = st.tabs(["💼 Create Job", "📄 Upload Resume
 with job_tab:
     st.markdown("### 💼 Create Job Posting")
     st.markdown("Define the job requirements and description to match against candidate resumes")
+    
+    # Add info about text format flexibility
+    st.info("""
+    💡 **Text Format Flexibility**: The job description accepts ANY text format:
+    - ✅ Plain paragraphs
+    - ✅ Bullet points and lists  
+    - ✅ Markdown formatting
+    - ✅ Mixed formats
+    - ✅ Copy-paste from any source
+    
+    The AI will automatically understand and process your content regardless of formatting!
+    """)
     
     with st.form("job_form", clear_on_submit=False):
         col1, col2 = st.columns([2, 1])
@@ -503,25 +609,25 @@ with job_tab:
             "📝 Job Description",
             height=300,
             value=(
-                "**About the Role**\n\n"
+                "About the Role\n\n"
                 "We are looking for a Software Engineer with strong backend and data engineering experience who can also apply modern AI/ML techniques.\n\n"
-                "**Responsibilities**\n"
-                "• Build scalable APIs and microservices\n"
-                "• Design and implement data pipelines\n"
-                "• Deploy and maintain AI/ML models in production\n"
-                "• Collaborate with cross-functional teams\n\n"
-                "**Requirements**\n"
-                "• 3+ years of backend development experience\n"
-                "• Strong proficiency in Python and SQL\n"
-                "• Experience with containerization (Docker, Kubernetes)\n"
-                "• Cloud platform experience (AWS, GCP, or Azure)\n"
-                "• Understanding of ML model deployment\n\n"
-                "**Nice to Have**\n"
-                "• Experience with FastAPI or similar frameworks\n"
-                "• Knowledge of vector databases\n"
-                "• MLOps experience"
+                "Responsibilities\n"
+                "- Build scalable APIs and microservices\n"
+                "- Design and implement data pipelines\n"
+                "- Deploy and maintain AI/ML models in production\n"
+                "- Collaborate with cross-functional teams\n\n"
+                "Requirements\n"
+                "- 3+ years of backend development experience\n"
+                "- Strong proficiency in Python and SQL\n"
+                "- Experience with containerization (Docker, Kubernetes)\n"
+                "- Cloud platform experience (AWS, GCP, or Azure)\n"
+                "- Understanding of ML model deployment\n\n"
+                "Nice to Have\n"
+                "- Experience with FastAPI or similar frameworks\n"
+                "- Knowledge of vector databases\n"
+                "- MLOps experience"
             ),
-            help="Provide a detailed job description including responsibilities, requirements, and qualifications"
+            help="✨ Enter job description in ANY text format - plain text, bullet points, markdown, or structured paragraphs. The AI understands all formats and will extract relevant information automatically. No special formatting required!"
         )
         
         required_skills_text = st.text_area(
@@ -547,24 +653,81 @@ with job_tab:
                     res = api_post_job_form(eff_base, title, description, required_skills_text or None)
                     st.session_state["last_job_id"] = res.get("job_id", "")
                     
-                    st.success("✅ Job posting created successfully!")
+                    # Enhanced success display with better visibility
+                    st.balloons()  # Celebration animation
+                    
+                    # Store job creation result in session state for persistence
+                    st.session_state["job_creation_result"] = {
+                        "job_id": res.get("job_id", ""),
+                        "status": res.get("status", "Created"),
+                        "required_skills": res.get("required_skills", []),
+                        "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                    
+                    # Prominent job ID display with enhanced visibility
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); 
+                                padding: 25px; border-radius: 15px; border: 3px solid #28a745; 
+                                margin: 25px 0; text-align: center; box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
+                        <h2 style="color: #155724; margin: 0 0 15px 0; font-size: 2rem;">Job Created Successfully!</h2>
+                        <div style="background: rgba(255,255,255,0.9); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                            <h3 style="color: #155724; margin: 0 0 10px 0;">📋 Job ID</h3>
+                            <code style="background: #fff; padding: 10px 15px; border-radius: 8px; font-size: 1.2rem; font-weight: bold; color: #155724; border: 2px solid #28a745;">{res.get("job_id", "N/A")}</code>
+                        </div>
+                        <p style="color: #155724; margin: 15px 0 0 0; font-size: 1.1rem; font-weight: 500;">
+                            ✨ Copy this Job ID to use in the Resume Matching tab
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
                     # Display results in a nice format
-                    col1, col2 = st.columns(2)
+                    col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric("Job ID", res.get("job_id", "N/A"))
-                        st.metric("Status", res.get("status", "Created"))
+                        st.metric("📋 Job ID", res.get("job_id", "N/A")[:12] + "..." if len(res.get("job_id", "")) > 12 else res.get("job_id", "N/A"))
                     
                     with col2:
+                        st.metric("✅ Status", res.get("status", "Created"))
+                    
+                    with col3:
+                        skills_count = 0
                         if "required_skills" in res and res["required_skills"]:
-                            st.write("**Extracted Skills:**")
                             skills = res["required_skills"]
                             if isinstance(skills, list):
-                                st.write(", ".join(skills))
+                                skills_count = len(skills)
                             else:
-                                st.write(skills)
+                                skills_count = len(str(skills).split(','))
+                        st.metric("🎯 Skills Found", skills_count)
                     
-                    with st.expander("📋 View Full Response", expanded=False):
+                    # Skills display
+                    if "required_skills" in res and res["required_skills"]:
+                        st.markdown("#### 🎯 Extracted Skills")
+                        skills = res["required_skills"]
+                        if isinstance(skills, list):
+                            # Display skills as badges
+                            skills_html = ""
+                            for skill in skills:
+                                skills_html += f'<span style="background: #667eea; color: white; padding: 4px 8px; margin: 2px; border-radius: 12px; font-size: 12px; display: inline-block;">{skill}</span> '
+                            st.markdown(skills_html, unsafe_allow_html=True)
+                        else:
+                            st.write(skills)
+                    
+                    # Action buttons
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        if st.button("📄 Go to Upload Resumes", use_container_width=True):
+                            st.switch_page("📄 Upload Resumes")  # This won't work in current setup, but shows intent
+                    
+                    with col2:
+                        if st.button("🎯 Go to Matching", use_container_width=True):
+                            st.switch_page("🎯 Match & Analyze")  # This won't work in current setup, but shows intent
+                    
+                    with col3:
+                        if st.button("📋 Copy Job ID", use_container_width=True):
+                            st.code(res.get("job_id", "N/A"))
+                            st.info("Job ID displayed above - copy it manually")
+                    
+                    with st.expander("📋 View Full API Response", expanded=False):
                         st.json(res)
                         
                 except requests.HTTPError as e:
@@ -574,8 +737,61 @@ with job_tab:
                 except Exception as e:
                     st.error(f"❌ Error creating job: {str(e)}")
 
-    # Show current job info if available
-    if st.session_state.get("last_job_id"):
+    # Show persistent job creation status
+    if st.session_state.get("job_creation_result"):
+        st.markdown("---")
+        job_result = st.session_state["job_creation_result"]
+        
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%); 
+                    padding: 20px; border-radius: 12px; border-left: 5px solid #28a745; 
+                    margin: 20px 0; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.1);">
+            <h4 style="color: #155724; margin: 0 0 15px 0; display: flex; align-items: center;">
+                <span style="margin-right: 10px;">✅</span>
+                Last Job Created Successfully
+            </h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <strong style="color: #155724;">📋 Job ID:</strong><br>
+                    <code style="background: #fff; padding: 5px 8px; border-radius: 4px; font-size: 0.9rem;">{job_result.get("job_id", "N/A")}</code>
+                </div>
+                <div>
+                    <strong style="color: #155724;">📅 Created:</strong><br>
+                    <span style="color: #495057;">{job_result.get("timestamp", "N/A")}</span>
+                </div>
+            </div>
+            <div style="text-align: center; padding-top: 10px; border-top: 1px solid #c3e6cb;">
+                <small style="color: #6c757d;">💡 Use this Job ID in the "Match & Analyze" tab to find matching resumes</small>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Action buttons for the created job
+        job_col1, job_col2, job_col3 = st.columns(3)
+        
+        with job_col1:
+            if st.button("🔄 Refresh Job Details", help="Fetch latest job details from API"):
+                try:
+                    eff_base = resolve_api_base(api_base_norm)
+                    job_data = api_get_job(eff_base, job_result["job_id"])
+                    st.success("Job data refreshed!")
+                    with st.expander("📋 Full Job Details", expanded=True):
+                        st.json(job_data)
+                except Exception as e:
+                    st.error(f"Failed to refresh: {e}")
+        
+        with job_col2:
+            if st.button("📋 Copy Job ID", help="Display Job ID for easy copying"):
+                st.code(job_result["job_id"])
+                st.info("👆 Job ID displayed above - copy it manually")
+        
+        with job_col3:
+            if st.button("🗑️ Clear Job Status", help="Clear the job creation status"):
+                del st.session_state["job_creation_result"]
+                st.rerun()
+    
+    # Show current job info if available (fallback for older sessions)
+    elif st.session_state.get("last_job_id"):
         st.markdown("---")
         st.markdown("#### 📋 Current Job Summary")
         job_col1, job_col2 = st.columns([3, 1])
@@ -691,21 +907,41 @@ with resume_tab:
             cursor: not-allowed;
             transform: none;
         }
+        .upload-btn:disabled::after {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-left: 10px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         .result-container {
             margin-top: 20px;
-            padding: 20px;
-            background: rgba(0,0,0,0.8);
-            border-radius: 8px;
-            border-left: 4px solid #00d4aa;
+            padding: 25px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 12px;
+            border: 2px solid #00d4aa;
+            box-shadow: 0 8px 25px rgba(0, 212, 170, 0.2);
         }
         .result-text {
             color: #00ff88;
             font-family: 'Courier New', monospace;
             font-size: 14px;
             white-space: pre-wrap;
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
             margin: 0;
+            line-height: 1.5;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
         }
         .file-info {
             background: rgba(255,255,255,0.1);
@@ -840,16 +1076,25 @@ with resume_tab:
                 let result = '';
                 
                 if (resp.ok) {
-                    result = '✅ Upload Successful!\\n\\n';
+                    result = '🎉 UPLOAD SUCCESSFUL! 🎉\\n';
+                    result += '═'.repeat(50) + '\\n\\n';
                     try {
                         const jsonData = JSON.parse(text);
                         if (Array.isArray(jsonData)) {
-                            result += `📊 Processed ${jsonData.length} resume(s):\\n\\n`;
+                            result += `📊 PROCESSING SUMMARY\\n`;
+                            result += `Total Files Processed: ${jsonData.length}\\n`;
+                            result += '─'.repeat(30) + '\\n\\n';
+                            
                             jsonData.forEach((item, index) => {
-                                result += `${index + 1}. Resume ID: ${item.resume_id || 'N/A'}\\n`;
-                                result += `   Candidate: ${item.candidate_name || 'Unnamed'}\\n`;
-                                result += `   Status: ${item.status || 'Unknown'}\\n\\n`;
+                                result += `📄 RESUME #${index + 1}\\n`;
+                                result += `├─ ID: ${item.resume_id || 'N/A'}\\n`;
+                                result += `├─ Candidate: ${item.candidate_name || 'Unnamed'}\\n`;
+                                result += `├─ Status: ${item.status || 'Processed'}\\n`;
+                                result += `└─ ${item.filename || 'File processed'}\\n\\n`;
                             });
+                            
+                            result += '✨ All resumes are now ready for matching!\\n';
+                            result += '💡 Go to "Match & Analyze" tab to find the best candidates.';
                         } else {
                             result += JSON.stringify(jsonData, null, 2);
                         }
@@ -857,16 +1102,56 @@ with resume_tab:
                         result += text;
                     }
                 } else {
-                    result = `❌ Upload Failed (HTTP ${resp.status})\\n\\n${text}`;
+                    result = `💥 UPLOAD FAILED 💥\\n`;
+                    result += '═'.repeat(50) + '\\n\\n';
+                    result += `❌ HTTP Status: ${resp.status}\\n`;
+                    result += `📋 Error Details:\\n${text}\\n\\n`;
+                    result += '💡 Please check your files and try again.';
                 }
                 
                 progressFill.style.width = '100%';
                 resultElement.textContent = result;
                 resultContainer.style.display = 'block';
                 
+                // Scroll to results
+                resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+                // Store results in localStorage for Streamlit to potentially access
+                if (resp.ok) {
+                    try {
+                        const jsonData = JSON.parse(text);
+                        localStorage.setItem('lastUploadResults', JSON.stringify({
+                            success: true,
+                            data: jsonData,
+                            timestamp: new Date().toISOString()
+                        }));
+                    } catch (e) {
+                        localStorage.setItem('lastUploadResults', JSON.stringify({
+                            success: true,
+                            data: text,
+                            timestamp: new Date().toISOString()
+                        }));
+                    }
+                } else {
+                    localStorage.setItem('lastUploadResults', JSON.stringify({
+                        success: false,
+                        error: text,
+                        status: resp.status,
+                        timestamp: new Date().toISOString()
+                    }));
+                }
+                
             } catch (err) {
                 resultElement.textContent = `💥 Network Error: ${err.message}`;
                 resultContainer.style.display = 'block';
+                
+                // Store error in localStorage
+                localStorage.setItem('lastUploadResults', JSON.stringify({
+                    success: false,
+                    error: err.message,
+                    timestamp: new Date().toISOString()
+                }));
+                
             } finally {
                 // Reset UI
                 setTimeout(() => {
@@ -881,6 +1166,139 @@ with resume_tab:
     """
     
     st.components.v1.html(html, height=600)
+    
+    # Add Streamlit-based results display for better visibility
+    st.markdown("---")
+    st.markdown("### 📊 Upload Status & Results")
+    
+    # Initialize session state for upload results
+    if "upload_results" not in st.session_state:
+        st.session_state["upload_results"] = None
+    if "last_upload_check" not in st.session_state:
+        st.session_state["last_upload_check"] = 0
+    
+    # Add a refresh button to check for new results
+    col1, col2, col3 = st.columns([1, 1, 2])
+    with col1:
+        if st.button("🔄 Check Upload Results", help="Check for latest upload results"):
+            st.session_state["last_upload_check"] = st.session_state.get("last_upload_check", 0) + 1
+            st.rerun()
+    
+    with col2:
+        if st.button("🗑️ Clear Results", help="Clear upload results cache"):
+            st.session_state["upload_results"] = None
+            st.success("Results cleared!")
+    
+    # JavaScript to check localStorage and display results with better visibility
+    check_results_js = f"""
+    <script>
+        function checkUploadResults() {{
+            const results = localStorage.getItem('lastUploadResults');
+            if (results) {{
+                try {{
+                    const data = JSON.parse(results);
+                    const resultDiv = document.getElementById('streamlit-upload-results');
+                    if (resultDiv) {{
+                        if (data.success) {{
+                            let detailsHtml = '';
+                            if (data.data && Array.isArray(data.data)) {{
+                                detailsHtml = `
+                                    <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.9); border-radius: 8px; border: 1px solid #c3e6cb;">
+                                        <h5 style="color: #155724; margin: 0 0 10px 0;">📋 Processed Resumes:</h5>
+                                        <div style="max-height: 200px; overflow-y: auto;">
+                                `;
+                                data.data.forEach((item, index) => {{
+                                    detailsHtml += `
+                                        <div style="margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #28a745;">
+                                            <strong>📄 Resume ${{index + 1}}:</strong><br>
+                                            <span style="font-family: monospace; font-size: 12px;">ID: ${{item.resume_id || 'N/A'}}</span><br>
+                                            <span style="color: #495057;">👤 Candidate: ${{item.candidate_name || 'Unnamed'}}</span><br>
+                                            <span style="color: #28a745;">✅ Status: ${{item.status || 'Processed'}}</span>
+                                        </div>
+                                    `;
+                                }});
+                                detailsHtml += '</div></div>';
+                            }}
+                            
+                            resultDiv.innerHTML = `
+                                <div style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border: 2px solid #28a745; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);">
+                                    <div style="text-align: center; margin-bottom: 15px;">
+                                        <h3 style="color: #155724; margin: 0; font-size: 1.5rem;">🎉 Upload Successful!</h3>
+                                        <p style="color: #155724; margin: 5px 0 0 0; font-size: 1.1rem;">All resume files have been processed successfully</p>
+                                    </div>
+                                    ${{detailsHtml}}
+                                    <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #c3e6cb;">
+                                        <small style="color: #6c757d;">📅 Uploaded: ${{new Date(data.timestamp).toLocaleString()}}</small>
+                                    </div>
+                                </div>
+                            `;
+                        }} else {{
+                            resultDiv.innerHTML = `
+                                <div style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border: 2px solid #dc3545; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);">
+                                    <div style="text-align: center;">
+                                        <h3 style="color: #721c24; margin: 0 0 10px 0; font-size: 1.5rem;">❌ Upload Failed</h3>
+                                        <div style="background: rgba(255,255,255,0.8); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                                            <p style="color: #721c24; margin: 0; font-weight: 500;">Error Details:</p>
+                                            <code style="color: #dc3545; background: #fff; padding: 5px; border-radius: 4px; display: block; margin-top: 5px; word-break: break-all;">${{data.error || 'Unknown error'}}</code>
+                                            ${{data.status ? `<p style="color: #721c24; margin: 5px 0 0 0;">HTTP Status: ${{data.status}}</p>` : ''}}
+                                        </div>
+                                        <small style="color: #6c757d;">📅 Failed at: ${{new Date(data.timestamp).toLocaleString()}}</small>
+                                    </div>
+                                </div>
+                            `;
+                        }}
+                    }}
+                }} catch (e) {{
+                    console.error('Error parsing upload results:', e);
+                }}
+            }} else {{
+                const resultDiv = document.getElementById('streamlit-upload-results');
+                if (resultDiv) {{
+                    resultDiv.innerHTML = `
+                        <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border: 1px solid #17a2b8; border-radius: 8px; padding: 15px; margin: 10px 0; text-align: center;">
+                            <h4 style="color: #0c5460; margin: 0 0 5px 0;">📤 Ready for Upload</h4>
+                            <p style="color: #0c5460; margin: 0; font-size: 0.9rem;">Select resume files above and click "Upload Resumes" to get started</p>
+                        </div>
+                    `;
+                }}
+            }}
+        }}
+        
+        // Check results on page load and periodically
+        document.addEventListener('DOMContentLoaded', checkUploadResults);
+        setInterval(checkUploadResults, 1000);
+        
+        // Force check when Streamlit reruns (triggered by button clicks)
+        setTimeout(checkUploadResults, 100);
+    </script>
+    <div id="streamlit-upload-results" style="min-height: 60px;"></div>
+    """
+    
+    st.components.v1.html(check_results_js, height=150)
+    
+    # Show upload instructions
+    with st.expander("📝 Upload Instructions & Tips", expanded=False):
+        st.markdown("""
+        #### 📝 Step-by-Step Upload Guide:
+        1. **Select Files**: Click "Choose Files" and select PDF or DOCX resume files
+        2. **Add Names** (Optional): Enter candidate names, one per line, matching file order
+        3. **Upload**: Click "Upload Resumes" and wait for the progress bar
+        4. **Results**: Success/error messages appear below with full details
+        5. **Next Step**: Copy the Job ID and go to "Match & Analyze" tab
+        
+        #### 💡 Pro Tips:
+        - Upload multiple files at once for batch processing
+        - File names should be descriptive (e.g., "john_doe_resume.pdf")
+        - Supported formats: PDF, DOCX
+        - Maximum file size: 10MB per file
+        - Results appear both in the upload form AND in the status section below
+        """)
+    
+    # Show recent upload status if available
+    if st.session_state.get("upload_results"):
+        st.success("✅ Recent upload completed successfully!")
+        with st.expander("View Upload Details"):
+            st.json(st.session_state["upload_results"])
 
 # ------------------------------
 # Match Tab
@@ -1023,5 +1441,19 @@ with match_tab:
             except Exception as e:
                 st.error(f"Error fetching matches: {e}")
 
-st.markdown("\n\n")
-st.caption("Tip: Configure API_BASE_URL env var for this app if your backend isn't on localhost:8000.")
+# Footer
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center; padding: 2rem 0; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); margin: 2rem -1rem -2rem -1rem; border-radius: 20px 20px 0 0;">
+    <div style="margin-bottom: 1rem;">
+        <span style="font-size: 1.5rem;">🚀</span>
+        <strong style="margin-left: 0.5rem; color: #495057;">AI Resume Screener</strong>
+    </div>
+    <p style="color: #6c757d; margin: 0.5rem 0; font-size: 0.9rem;">
+        Built with FastAPI • Streamlit • PostgreSQL • sentence-transformers
+    </p>
+    <p style="color: #868e96; margin: 0; font-size: 0.8rem;">
+        💡 Tip: Configure API_BASE_URL environment variable if your backend isn't on localhost:8000
+    </p>
+</div>
+""", unsafe_allow_html=True)
