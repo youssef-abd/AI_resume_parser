@@ -948,22 +948,8 @@ with job_tab:
                         "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
                     
-                    # Prominent job ID display with enhanced visibility
-                    st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); 
-                                padding: 25px; border-radius: 15px; border: 3px solid #28a745; 
-                                margin: 25px 0; text-align: center; box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);">
-                        <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
-                        <h2 style="color: #155724; margin: 0 0 15px 0; font-size: 2rem;">Job Created Successfully!</h2>
-                        <div style="background: rgba(255,255,255,0.9); padding: 15px; border-radius: 10px; margin: 15px 0;">
-                            <h3 style="color: #155724; margin: 0 0 10px 0;">📋 Job ID</h3>
-                            <code style="background: #fff; padding: 10px 15px; border-radius: 8px; font-size: 1.2rem; font-weight: bold; color: #155724; border: 2px solid #28a745;">{res.get("job_id", "N/A")}</code>
-                        </div>
-                        <p style="color: #155724; margin: 15px 0 0 0; font-size: 1.1rem; font-weight: 500;">
-                            ✨ Copy this Job ID to use in the Resume Matching tab
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    # Simple success message
+                    st.success(f"✅ Job created successfully! Job ID: `{res.get('job_id', 'N/A')}`")
                     
                     # Display results in a nice format
                     col1, col2, col3 = st.columns(3)
@@ -996,21 +982,15 @@ with job_tab:
                         else:
                             st.write(skills)
                     
-                    # Action buttons
-                    col1, col2, col3 = st.columns(3)
+                    # Next steps info
+                    col1, col2 = st.columns(2)
                     with col1:
                         st.info("📄 **Next Step**: Switch to 'Upload Resumes' tab to add candidate files")
                     
                     with col2:
                         st.info("🎯 **Then**: Use 'Match & Analyze' tab to find the best candidates")
                     
-                    with col3:
-                        if st.button("📋 Copy Job ID", use_container_width=True):
-                            st.code(res.get("job_id", "N/A"))
-                            st.info("Job ID displayed above - copy it manually")
-                    
-                    with st.expander("📋 View Full API Response", expanded=False):
-                        st.json(res)
+
                         
                 except requests.HTTPError as e:
                     st.error(f"❌ HTTP error: {e.response.status_code}")
@@ -1048,29 +1028,10 @@ with job_tab:
         </div>
         """, unsafe_allow_html=True)
         
-        # Action buttons for the created job
-        job_col1, job_col2, job_col3 = st.columns(3)
-        
-        with job_col1:
-            if st.button("🔄 Refresh Job Details", help="Fetch latest job details from API"):
-                try:
-                    eff_base = resolve_api_base(api_base_norm)
-                    job_data = api_get_job(eff_base, job_result["job_id"])
-                    st.success("Job data refreshed!")
-                    with st.expander("📋 Full Job Details", expanded=True):
-                        st.json(job_data)
-                except Exception as e:
-                    st.error(f"Failed to refresh: {e}")
-        
-        with job_col2:
-            if st.button("📋 Copy Job ID", help="Display Job ID for easy copying"):
-                st.code(job_result["job_id"])
-                st.info("👆 Job ID displayed above - copy it manually")
-        
-        with job_col3:
-            if st.button("🗑️ Clear Job Status", help="Clear the job creation status"):
-                del st.session_state["job_creation_result"]
-                st.rerun()
+        # Action button for clearing job status
+        if st.button("🗑️ Clear Job Status", help="Clear the job creation status"):
+            del st.session_state["job_creation_result"]
+            st.rerun()
     
     # Show current job info if available (fallback for older sessions)
     elif st.session_state.get("last_job_id"):
@@ -1400,37 +1361,9 @@ with resume_tab:
                 let result = '';
                 
                 if (resp.ok) {
-                    result = '🎉 UPLOAD SUCCESSFUL! 🎉\\n';
-                    result += '═'.repeat(50) + '\\n\\n';
-                    try {
-                        const jsonData = JSON.parse(text);
-                        if (Array.isArray(jsonData)) {
-                            result += `📊 PROCESSING SUMMARY\\n`;
-                            result += `Total Files Processed: ${jsonData.length}\\n`;
-                            result += '─'.repeat(30) + '\\n\\n';
-                            
-                            jsonData.forEach((item, index) => {
-                                result += `📄 RESUME #${index + 1}\\n`;
-                                result += `├─ ID: ${item.resume_id || 'N/A'}\\n`;
-                                result += `├─ Candidate: ${item.candidate_name || 'Unnamed'}\\n`;
-                                result += `├─ Status: ${item.status || 'Processed'}\\n`;
-                                result += `└─ ${item.filename || 'File processed'}\\n\\n`;
-                            });
-                            
-                            result += '✨ All resumes are now ready for matching!\\n';
-                            result += '💡 Switch to "Match & Analyze" tab to find the best candidates.';
-                        } else {
-                            result += JSON.stringify(jsonData, null, 2);
-                        }
-                    } catch {
-                        result += text;
-                    }
+                    result = '✅ Upload completed successfully!';
                 } else {
-                    result = `💥 UPLOAD FAILED 💥\\n`;
-                    result += '═'.repeat(50) + '\\n\\n';
-                    result += `❌ HTTP Status: ${resp.status}\\n`;
-                    result += `📋 Error Details:\\n${text}\\n\\n`;
-                    result += '💡 Please check your files and try again.';
+                    result = `❌ Upload failed (HTTP ${resp.status}): ${text}`;
                 }
                 
                 progressFill.style.width = '100%';
@@ -1513,138 +1446,10 @@ with resume_tab:
     
     st.components.v1.html(html, height=1000)
     
-    # Add Streamlit-based results display for better visibility
-    st.markdown("---")
-    st.markdown("### 📊 Upload Status & Results")
+
     
-    # Initialize session state for upload results
-    if "upload_results" not in st.session_state:
-        st.session_state["upload_results"] = None
-    if "last_upload_check" not in st.session_state:
-        st.session_state["last_upload_check"] = 0
-    
-    # Add a refresh button to check for new results
-    col1, col2, col3 = st.columns([1, 1, 2])
-    with col1:
-        if st.button("🔄 Check Upload Results", help="Check for latest upload results"):
-            st.session_state["last_upload_check"] = st.session_state.get("last_upload_check", 0) + 1
-            st.rerun()
-    
-    with col2:
-        if st.button("🗑️ Clear Results", help="Clear upload results cache"):
-            st.session_state["upload_results"] = None
-            st.success("Results cleared!")
-    
-    # JavaScript to check localStorage and display results with better visibility
-    check_results_js = f"""
-    <script>
-        function checkUploadResults() {{
-            const results = localStorage.getItem('lastUploadResults');
-            if (results) {{
-                try {{
-                    const data = JSON.parse(results);
-                    const resultDiv = document.getElementById('streamlit-upload-results');
-                    if (resultDiv) {{
-                        if (data.success) {{
-                            let detailsHtml = '';
-                            if (data.data && Array.isArray(data.data)) {{
-                                detailsHtml = `
-                                    <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.9); border-radius: 8px; border: 1px solid #c3e6cb;">
-                                        <h5 style="color: #155724; margin: 0 0 10px 0;">📋 Processed Resumes:</h5>
-                                        <div style="max-height: 200px; overflow-y: auto;">
-                                `;
-                                data.data.forEach((item, index) => {{
-                                    detailsHtml += `
-                                        <div style="margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #28a745;">
-                                            <strong>📄 Resume ${{index + 1}}:</strong><br>
-                                            <span style="font-family: monospace; font-size: 12px;">ID: ${{item.resume_id || 'N/A'}}</span><br>
-                                            <span style="color: #495057;">👤 Candidate: ${{item.candidate_name || 'Unnamed'}}</span><br>
-                                            <span style="color: #28a745;">✅ Status: ${{item.status || 'Processed'}}</span>
-                                        </div>
-                                    `;
-                                }});
-                                detailsHtml += '</div></div>';
-                            }}
-                            
-                            resultDiv.innerHTML = `
-                                <div style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border: 2px solid #28a745; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);">
-                                    <div style="text-align: center; margin-bottom: 15px;">
-                                        <h3 style="color: #155724; margin: 0; font-size: 1.5rem;">🎉 Upload Successful!</h3>
-                                        <p style="color: #155724; margin: 5px 0 0 0; font-size: 1.1rem;">All resume files have been processed successfully</p>
-                                    </div>
-                                    ${{detailsHtml}}
-                                    <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #c3e6cb;">
-                                        <small style="color: #6c757d;">📅 Uploaded: ${{new Date(data.timestamp).toLocaleString()}}</small>
-                                    </div>
-                                </div>
-                            `;
-                        }} else {{
-                            resultDiv.innerHTML = `
-                                <div style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border: 2px solid #dc3545; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);">
-                                    <div style="text-align: center;">
-                                        <h3 style="color: #721c24; margin: 0 0 10px 0; font-size: 1.5rem;">❌ Upload Failed</h3>
-                                        <div style="background: rgba(255,255,255,0.8); padding: 15px; border-radius: 8px; margin: 10px 0;">
-                                            <p style="color: #721c24; margin: 0; font-weight: 500;">Error Details:</p>
-                                            <code style="color: #dc3545; background: #fff; padding: 5px; border-radius: 4px; display: block; margin-top: 5px; word-break: break-all;">${{data.error || 'Unknown error'}}</code>
-                                            ${{data.status ? `<p style="color: #721c24; margin: 5px 0 0 0;">HTTP Status: ${{data.status}}</p>` : ''}}
-                                        </div>
-                                        <small style="color: #6c757d;">📅 Failed at: ${{new Date(data.timestamp).toLocaleString()}}</small>
-                                    </div>
-                                </div>
-                            `;
-                        }}
-                    }}
-                }} catch (e) {{
-                    console.error('Error parsing upload results:', e);
-                }}
-            }} else {{
-                const resultDiv = document.getElementById('streamlit-upload-results');
-                if (resultDiv) {{
-                    resultDiv.innerHTML = `
-                        <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border: 1px solid #17a2b8; border-radius: 8px; padding: 15px; margin: 10px 0; text-align: center;">
-                            <h4 style="color: #0c5460; margin: 0 0 5px 0;">📤 Ready for Upload</h4>
-                            <p style="color: #0c5460; margin: 0; font-size: 0.9rem;">Select resume files above and click "Upload Resumes" to get started</p>
-                        </div>
-                    `;
-                }}
-            }}
-        }}
-        
-        // Check results on page load and periodically
-        document.addEventListener('DOMContentLoaded', checkUploadResults);
-        setInterval(checkUploadResults, 1000);
-        
-        // Force check when Streamlit reruns (triggered by button clicks)
-        setTimeout(checkUploadResults, 100);
-    </script>
-    <div id="streamlit-upload-results" style="min-height: 60px;"></div>
-    """
-    
-    st.components.v1.html(check_results_js, height=300)
-    
-    # Show upload instructions
-    with st.expander("📝 Upload Instructions & Tips", expanded=False):
-        st.markdown("""
-        #### 📝 Step-by-Step Upload Guide:
-        1. **Select Files**: Click "Choose Files" and select PDF or DOCX resume files
-        2. **Add Names** (Optional): Enter candidate names, one per line, matching file order
-        3. **Upload**: Click "Upload Resumes" and wait for the progress bar
-        4. **Results**: Success/error messages appear below with full details
-        5. **Next Step**: Copy the Job ID and switch to "Match & Analyze" tab
-        
-        #### 💡 Pro Tips:
-        - Upload multiple files at once for batch processing
-        - File names should be descriptive (e.g., "john_doe_resume.pdf")
-        - Supported formats: PDF, DOCX
-        - Maximum file size: 10MB per file
-        - Results appear both in the upload form AND in the status section below
-        """)
-    
-    # Show recent upload status if available
-    if st.session_state.get("upload_results"):
-        st.success("✅ Recent upload completed successfully!")
-        with st.expander("View Upload Details"):
-            st.json(st.session_state["upload_results"])
+
+
 
 # ------------------------------
 # Match Tab
