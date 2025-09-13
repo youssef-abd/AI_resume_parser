@@ -72,59 +72,132 @@ cleanup_js = '''
 <script>
 // Remove any unwanted text that might appear in the UI
 function removeUnwantedText() {
-    const unwantedTexts = ['keyboard_double_arrow_right', 'keyboard_arrow_right', 'arrow_right'];
+    const unwantedTexts = [
+        'keyboard_double_arrow_right', 
+        'keyboard_arrow_right', 
+        'arrow_right',
+        'keyboard_double_arrow_right ',
+        ' keyboard_double_arrow_right',
+        ' keyboard_double_arrow_right '
+    ];
     
-    // Function to recursively check and clean text nodes
-    function cleanTextNodes(node) {
-        if (node.nodeType === Node.TEXT_NODE) {
-            unwantedTexts.forEach(unwantedText => {
-                if (node.textContent.includes(unwantedText)) {
-                    node.textContent = node.textContent.replace(new RegExp(unwantedText, 'g'), '');
-                }
-            });
-        } else {
-            for (let child of node.childNodes) {
-                cleanTextNodes(child);
+    // More aggressive text replacement
+    unwantedTexts.forEach(unwantedText => {
+        // Replace in document body text content
+        if (document.body.innerHTML.includes(unwantedText)) {
+            document.body.innerHTML = document.body.innerHTML.replace(new RegExp(unwantedText, 'g'), '');
+        }
+        
+        // Replace in all text nodes
+        const walker = document.createTreeWalker(
+            document.body,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        
+        const textNodes = [];
+        let node;
+        while (node = walker.nextNode()) {
+            if (node.textContent.includes(unwantedText)) {
+                textNodes.push(node);
             }
         }
-    }
+        
+        textNodes.forEach(textNode => {
+            textNode.textContent = textNode.textContent.replace(new RegExp(unwantedText, 'g'), '');
+        });
+    });
     
-    // Clean existing content
-    cleanTextNodes(document.body);
-    
-    // Also remove any elements that contain only the unwanted text
+    // Remove elements that contain only unwanted text
     const allElements = document.querySelectorAll('*');
     allElements.forEach(element => {
         unwantedTexts.forEach(unwantedText => {
-            if (element.textContent.trim() === unwantedText) {
-                element.style.display = 'none';
-                element.remove(); // Completely remove the element
+            const trimmedText = element.textContent.trim();
+            if (trimmedText === unwantedText || trimmedText.includes(unwantedText)) {
+                if (element.children.length === 0) {
+                    // If it's a leaf element, replace the text
+                    element.textContent = element.textContent.replace(new RegExp(unwantedText, 'g'), '');
+                } else if (trimmedText === unwantedText) {
+                    // If the entire element is just the unwanted text, hide it
+                    element.style.display = 'none';
+                }
             }
-            // Also check if element contains the unwanted text as part of its content
-            if (element.textContent.includes(unwantedText) && element.children.length === 0) {
-                element.textContent = element.textContent.replace(new RegExp(unwantedText, 'g'), '');
+            
+            // Also check innerHTML
+            if (element.innerHTML && element.innerHTML.includes(unwantedText)) {
+                element.innerHTML = element.innerHTML.replace(new RegExp(unwantedText, 'g'), '');
             }
         });
     });
     
-    // Special handling for common Streamlit elements that might contain unwanted text
-    const streamlitElements = document.querySelectorAll('[data-testid], .stMarkdown, .stText, .element-container');
-    streamlitElements.forEach(element => {
-        unwantedTexts.forEach(unwantedText => {
-            if (element.innerHTML && element.innerHTML.includes(unwantedText)) {
-                element.innerHTML = element.innerHTML.replace(new RegExp(unwantedText, 'g'), '');
-            }
+    // Special handling for Streamlit components
+    const streamlitSelectors = [
+        '[data-testid]',
+        '.stMarkdown', 
+        '.stText', 
+        '.element-container',
+        '.stButton',
+        '.stSelectbox',
+        '.stTabs',
+        'div[role="tab"]',
+        'div[role="tabpanel"]'
+    ];
+    
+    streamlitSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+            unwantedTexts.forEach(unwantedText => {
+                if (element.textContent && element.textContent.includes(unwantedText)) {
+                    element.textContent = element.textContent.replace(new RegExp(unwantedText, 'g'), '');
+                }
+                if (element.innerHTML && element.innerHTML.includes(unwantedText)) {
+                    element.innerHTML = element.innerHTML.replace(new RegExp(unwantedText, 'g'), '');
+                }
+            });
         });
     });
 }
 
 // Run cleanup on page load and periodically
 document.addEventListener('DOMContentLoaded', removeUnwantedText);
-setInterval(removeUnwantedText, 1000);
+setInterval(removeUnwantedText, 500); // More frequent cleanup
 
 // Also run when Streamlit updates the page
-const observer = new MutationObserver(removeUnwantedText);
-observer.observe(document.body, { childList: true, subtree: true });
+const observer = new MutationObserver(function(mutations) {
+    removeUnwantedText();
+    
+    // Also check for any new elements that might contain the unwanted text
+    mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList') {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    const unwantedTexts = [
+                        'keyboard_double_arrow_right', 
+                        'keyboard_arrow_right', 
+                        'arrow_right'
+                    ];
+                    
+                    unwantedTexts.forEach(unwantedText => {
+                        if (node.textContent && node.textContent.includes(unwantedText)) {
+                            node.textContent = node.textContent.replace(new RegExp(unwantedText, 'g'), '');
+                        }
+                        if (node.innerHTML && node.innerHTML.includes(unwantedText)) {
+                            node.innerHTML = node.innerHTML.replace(new RegExp(unwantedText, 'g'), '');
+                        }
+                    });
+                }
+            });
+        }
+    });
+});
+
+observer.observe(document.body, { 
+    childList: true, 
+    subtree: true, 
+    characterData: true,
+    attributes: true 
+});
 </script>
 '''
 
@@ -643,6 +716,24 @@ st.markdown("<br>", unsafe_allow_html=True)
 # Tabs with icons and better names
 job_tab, resume_tab, match_tab = st.tabs(["💼 Create Job", "📄 Upload Resumes", "🎯 Match & Analyze"])
 
+# Add additional cleanup for any unwanted text that might appear
+st.markdown("""
+<script>
+// Additional cleanup specifically for keyboard_double_arrow_right
+setTimeout(function() {
+    const elements = document.querySelectorAll('*');
+    elements.forEach(el => {
+        if (el.textContent && el.textContent.includes('keyboard_double_arrow_right')) {
+            el.textContent = el.textContent.replace(/keyboard_double_arrow_right/g, '');
+        }
+        if (el.innerHTML && el.innerHTML.includes('keyboard_double_arrow_right')) {
+            el.innerHTML = el.innerHTML.replace(/keyboard_double_arrow_right/g, '');
+        }
+    });
+}, 100);
+</script>
+""", unsafe_allow_html=True)
+
 # ------------------------------
 # Upload Job Tab
 # ------------------------------
@@ -900,8 +991,9 @@ with resume_tab:
             margin: 20px 0;
             color: white;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            min-height: 500px;
+            min-height: 700px;
             position: relative;
+            overflow: visible;
         }
         .upload-form {
             background: rgba(255,255,255,0.1);
@@ -1003,9 +1095,12 @@ with resume_tab:
             border-radius: 12px;
             border: 2px solid #00d4aa;
             box-shadow: 0 8px 25px rgba(0, 212, 170, 0.2);
-            min-height: 150px;
+            min-height: 200px;
+            max-height: 400px;
             position: relative;
             z-index: 10;
+            overflow: visible;
+            width: 100%;
         }
         .result-text {
             color: #00ff88;
@@ -1298,7 +1393,7 @@ with resume_tab:
     </script>
     """
     
-    st.components.v1.html(html, height=800)
+    st.components.v1.html(html, height=1000)
     
     # Add Streamlit-based results display for better visibility
     st.markdown("---")
@@ -1407,7 +1502,7 @@ with resume_tab:
     <div id="streamlit-upload-results" style="min-height: 60px;"></div>
     """
     
-    st.components.v1.html(check_results_js, height=200)
+    st.components.v1.html(check_results_js, height=300)
     
     # Show upload instructions
     with st.expander("📝 Upload Instructions & Tips", expanded=False):
