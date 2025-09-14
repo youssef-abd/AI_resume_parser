@@ -11,7 +11,7 @@
 
 **Intelligent resume matching powered by AI • Fast • Accurate • Scalable**
 
-[🚀 Live Demo](https://huggingface.co/spaces/youssef-abd/AI_resume_parser) • [📖 Documentation](#documentation) • [🛠️ Installation](#installation) • [🤝 Contributing](#contributing)
+[🚀 Live Demo](https://huggingface.co/spaces/youssef2106/AI_resume_parser) • [📖 Documentation](#documentation) • [🛠️ Installation](#installation) • [🤝 Contributing](#contributing)
 
 </div>
 
@@ -274,20 +274,7 @@ docker-compose -f docker-compose.prod.yml up -d --build
 
 ---
 
-## 🧪 Testing
 
-```bash
-# Run backend tests
-pytest app/tests/
-
-# Run frontend tests  
-python -m pytest src/tests/
-
-# Run integration tests
-docker-compose -f docker-compose.test.yml up --abort-on-container-exit
-```
-
----
 
 ## 📈 Performance
 
@@ -310,49 +297,10 @@ docker-compose -f docker-compose.test.yml up --abort-on-container-exit
 
 ---
 
-## 🤝 Contributing
 
-We welcome contributions! Here's how to get started:
 
-### 🐛 Bug Reports
-- Use the [issue tracker](https://github.com/youssef-abd/AI_resume_parser/issues)
-- Include detailed reproduction steps
-- Provide system information and logs
 
-### ✨ Feature Requests
-- Check existing [feature requests](https://github.com/youssef-abd/AI_resume_parser/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
-- Describe the use case and expected behavior
-- Consider implementation complexity
 
-### 🔧 Development Setup
-
-```bash
-# Fork and clone the repository
-git clone https://github.com/YOUR_USERNAME/AI_resume_parser.git
-cd AI_resume_parser
-
-# Create feature branch
-git checkout -b feature/amazing-feature
-
-# Make changes and test
-# ...
-
-# Commit and push
-git commit -m "Add amazing feature"
-git push origin feature/amazing-feature
-
-# Create Pull Request
-```
-
-### 📋 Development Guidelines
-
-- Follow PEP 8 for Python code
-- Add tests for new features
-- Update documentation
-- Use conventional commit messages
-- Ensure Docker builds pass
-
----
 
 ## 📄 License
 
